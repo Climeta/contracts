@@ -1,2 +1,2 @@
 # contracts
-Smart Contracts for Cliemta
+Smart Contracts for Climeta
