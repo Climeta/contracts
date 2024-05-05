@@ -1,3 +1,7 @@
+# IDE
+.idea/
+lib/
+
 # Compiler files
 cache/
 out/
@@ -12,3 +16,7 @@ docs/
 
 # Dotenv file
 .env
+
+# hardhat
+node_modules/
+package-lock.json
