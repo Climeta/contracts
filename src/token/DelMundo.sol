@@ -12,22 +12,24 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-import "../interfaces/IDelMundoWallet.sol";
-
 contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, ERC721Pausable, AccessControl {
+    event minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
+    error NotRay(address caller);
+    error DelMundo__IncorrectSigner(address signer);
+    error DelMundo__InsufficientFunds();
+    error DelMundo__SoldOut();
+
     bytes32 public constant RAY_ROLE = keccak256("RAY_ROLE");
     string private constant SIGNING_DOMAIN = "RayNFT-Voucher";
     string private constant SIGNATURE_VERSION = "1";
     bytes4 constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
 
-    event minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
-    error NotRay(address caller);
-
     address payable private _treasury;
 
     uint256 public maxPerWalletAmount = 20;
     uint256 public currentMaxSupply = 1000;
-    uint256 private _tokenId;
+    uint256 private s_tokenId;
+
 
     struct NFTVoucher {
         uint256 tokenId;
@@ -37,10 +39,10 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     }
 
     constructor()
-    ERC721("DelMundo", "DELMUNDO")
+    ERC721("DelMundo", "DEL-MUNDO")
     EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
         _grantRole(RAY_ROLE, msg.sender);
-        _tokenId=0;
+        s_tokenId=0;
     }
 
     modifier onlyRay () {
@@ -107,13 +109,19 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
         address signer = _verify(voucher);
 
         // make sure that the signer is authorized to mint NFTs
-        require(hasRole(RAY_ROLE, signer), string(abi.encodePacked("Signature invalid or unauthorized %1", signer)));
+        if (!hasRole(RAY_ROLE, signer)) {
+            revert DelMundo__IncorrectSigner(signer);
+        }
 
-        // make sure that the redeemer is paying enough to cover the buyer's cost
-        require(msg.value >= voucher.minPrice, "Insufficient funds to redeem");
+        // make sure that the redeemer is paying enough to cover the price
+        if (msg.value < voucher.minPrice) {
+            revert DelMundo__InsufficientFunds();
+        }
 
         uint256 supply = totalSupply();
-        require(supply <= currentMaxSupply, "All tokens already minted");
+        if (supply > currentMaxSupply) {
+            revert DelMundo__SoldOut();
+        }
 
         // first assign the token to the signer, to establish provenance on-chain
         _mint(signer, voucher.tokenId);
@@ -124,7 +132,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
 
         // record payment to signer's withdrawal balance
         emit minted(voucher.tokenId, voucher.uri, msg.sender);
-        unchecked{_tokenId++;}
+        unchecked{s_tokenId++;}
 
         return voucher.tokenId;
     }
@@ -134,10 +142,10 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     {
         uint256 supply = totalSupply();
         require(supply <= currentMaxSupply, "That's all folks");
-        _safeMint(to, _tokenId);
-        _setTokenURI(_tokenId, uri);
-        emit minted(_tokenId, uri, to);
-        unchecked{_tokenId++;}
+        _safeMint(to, s_tokenId);
+        _setTokenURI(s_tokenId, uri);
+        emit minted(s_tokenId, uri, to);
+        unchecked{s_tokenId++;}
     }
 
     function tokenURI(uint256 tokenId)
@@ -151,11 +159,16 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
 
     function royaltyInfo (uint256 _tokenId, uint256 _salePrice) public view override returns (address receiver, uint256 royaltyAmount) {
         // Pay Ops 10%
+        require(_tokenId > 0, "Ray not for sale!");
         return (_treasury, _salePrice * 10/100);
     }
 
     function _increaseBalance(address account, uint128 value) internal virtual override(ERC721, ERC721Enumerable) {
         super._increaseBalance(account, value);
+    }
+
+    function setTreasuryAddress(address payable account) external onlyRay {
+        _treasury = account;
     }
 
     function _update (address to, uint256 tokenId, address auth) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) returns(address) {
@@ -174,6 +187,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     }
 
     function withdraw() public payable onlyRay {
-        payable(msg.sender).call{value:address(this).balance}("");
+        (bool success, ) = payable(_treasury).call{value:address(this).balance}("");
+        require(success,"Withdraw failed");
     }
 }

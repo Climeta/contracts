@@ -1,7 +1,3 @@
-# IDE
-.idea/
-lib/
-
 # Compiler files
 cache/
 out/
@@ -20,3 +16,8 @@ docs/
 # hardhat
 node_modules/
 package-lock.json
+artifacts/
+cache_hardhat/
+/lib/
+/.idea/
+/.github/
