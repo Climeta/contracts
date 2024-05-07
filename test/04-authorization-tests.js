@@ -4,6 +4,9 @@ var  chaiAsPromised = require("chai-as-promised")
 const expect = chai.expect
 chai.use(chaiAsPromised)
 
+const CHAINID = process.env.BLOCKCHAIN_ID
+const NOT_AUTH_CONTRACT = "ClimetaCore__NotAuthContract"
+
 //TODO: Put some actual assertions in here - its all output only at the moment, requires review.
 
 async function deploy() {
@@ -13,7 +16,7 @@ async function deploy() {
     const rayward = await RAYWARD.deploy()
     await rayward.waitForDeployment();
 
-    let RAYDELMUNDO = await ethers.getContractFactory("RayDelMundo")
+    let RAYDELMUNDO = await ethers.getContractFactory("DelMundo")
     const rayNFT = await RAYDELMUNDO.deploy()
     await rayNFT.waitForDeployment()
 
@@ -88,7 +91,7 @@ describe("Authorization Testing suite", function (accounts) {
         console.log("ensure we cannot donate to climatecore directly")
 
         console.log("Amount deposited to Auth contract : " + ethers.formatEther(await ethers.provider.getBalance(authContractAddress)))
-        await expect(member1.sendTransaction({to: climetaCoreAddress, value: ethers.parseEther("1.0"),  })).to.be.rejectedWith("Please donate via Authorization contract")
+        await expect(member1.sendTransaction({to: climetaCoreAddress, value: ethers.parseEther("1.0"),  })).to.be.rejectedWith(NOT_AUTH_CONTRACT)
 
     })
     
