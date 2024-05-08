@@ -14,8 +14,8 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, ERC721Pausable, AccessControl {
     event minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
-    error NotRay(address caller);
-    error DelMundo__IncorrectSigner(address signer);
+    error DelMundo__NotRay(address caller);
+    error DelMundo__IncorrectSigner();
     error DelMundo__InsufficientFunds();
     error DelMundo__SoldOut();
 
@@ -24,7 +24,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     string private constant SIGNATURE_VERSION = "1";
     bytes4 constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
 
-    address payable private _treasury;
+    address payable public _treasury;
 
     uint256 public maxPerWalletAmount = 20;
     uint256 public currentMaxSupply = 1000;
@@ -47,7 +47,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
 
     modifier onlyRay () {
         if (!hasRole(RAY_ROLE, msg.sender)) {
-            revert NotRay(msg.sender);
+            revert DelMundo__NotRay(msg.sender);
         }
         _;
     }
@@ -99,6 +99,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     function setContractURI(string memory newURI) public onlyRay  {
         _contractURI = newURI;
     }
+
     function contractURI() public view returns (string memory) {
         return _contractURI;
     }
@@ -110,7 +111,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
 
         // make sure that the signer is authorized to mint NFTs
         if (!hasRole(RAY_ROLE, signer)) {
-            revert DelMundo__IncorrectSigner(signer);
+            revert DelMundo__IncorrectSigner();
         }
 
         // make sure that the redeemer is paying enough to cover the price
@@ -141,7 +142,9 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     public whenNotPaused onlyRay
     {
         uint256 supply = totalSupply();
-        require(supply <= currentMaxSupply, "That's all folks");
+        if (supply > currentMaxSupply) {
+            revert DelMundo__SoldOut();
+        }
         _safeMint(to, s_tokenId);
         _setTokenURI(s_tokenId, uri);
         emit minted(s_tokenId, uri, to);

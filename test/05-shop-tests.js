@@ -2,7 +2,7 @@ const { ethers, upgrades } = require("hardhat")
 var chai = require("chai")
 var  chaiAsPromised = require("chai-as-promised")
 const expect = chai.expect
-const { LazyMinter } = require( "../nft/nft-generator/lib/LazyMinter")
+const { LazyMinter } = require( "../script/Voucher")
 const {toNumber} = require("ethers");
 chai.use(chaiAsPromised)
 
