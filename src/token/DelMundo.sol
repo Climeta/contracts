@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, ERC721Pausable, AccessControl {
     event minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
     error DelMundo__NotRay(address caller);
-    error DelMundo__IncorrectSigner();
+    error DelMundo__IncorrectSigner(address signer);
     error DelMundo__InsufficientFunds();
     error DelMundo__SoldOut();
 
@@ -38,10 +38,10 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
         bytes signature;
     }
 
-    constructor()
+    constructor(address _admin)
     ERC721("DelMundo", "DEL-MUNDO")
     EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        _grantRole(RAY_ROLE, msg.sender);
+        _grantRole(RAY_ROLE, _admin);
         s_tokenId=0;
     }
 
@@ -52,6 +52,13 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
         _;
     }
 
+    function addAdmin(address newAdmin) external onlyRay {
+        _grantRole(RAY_ROLE, newAdmin);
+    }
+    function revokeAdmin(address oldAdmin) public onlyRay {
+        require (msg.sender != oldAdmin, "Can't revoke yourself");
+        _revokeRole(RAY_ROLE, oldAdmin);
+    }
     function pause() public onlyRay {
         _pause();
     }
@@ -64,23 +71,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
     function updateMaxPerWalletAmount(uint256 newAmount) public onlyRay {
         maxPerWalletAmount = newAmount;
     }
-    /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher An NFTVoucher to hash.
-    function _hash(NFTVoucher calldata voucher) internal view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(
-            keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)"),
-            voucher.tokenId,
-            keccak256(bytes(voucher.uri)),
-            voucher.minPrice
-        )));
-    }
-    /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher An NFTVoucher describing an unminted NFT.
-    function _verify(NFTVoucher calldata voucher) internal view returns (address) {
-        bytes32 digest = _hash(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
+
 
     /// @notice Returns all tokens owned by an address
     /// @param owner - address of the owner of the Ray tokens
@@ -104,6 +95,24 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
         return _contractURI;
     }
 
+    /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher An NFTVoucher to hash.
+    function _hash(NFTVoucher calldata voucher) internal view returns (bytes32) {
+        return _hashTypedDataV4(keccak256(abi.encode(
+            keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)"),
+            voucher.tokenId,
+            keccak256(bytes(voucher.uri)),
+            voucher.minPrice
+        )));
+    }
+    /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher An NFTVoucher describing an unminted NFT.
+    function _verify(NFTVoucher calldata voucher) internal view returns (address) {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
     function redeem(NFTVoucher calldata voucher) public payable returns (uint256) {
 
         // make sure signature is valid and get the address of the signer
@@ -111,7 +120,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Royalty, 
 
         // make sure that the signer is authorized to mint NFTs
         if (!hasRole(RAY_ROLE, signer)) {
-            revert DelMundo__IncorrectSigner();
+            revert DelMundo__IncorrectSigner(signer);
         }
 
         // make sure that the redeemer is paying enough to cover the price

@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./interfaces/IRayWallet.sol";
 
-import "./lib/MinimalReceiver.sol";
 import "./lib/ERC6551AccountLib.sol";
 import {IDelMundoWallet} from "./interfaces/IDelMundoWallet.sol";
 

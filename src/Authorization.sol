@@ -16,9 +16,13 @@ contract Authorization is Initializable, AccessControl {
     event donation(address indexed _benefactor, uint256 timestamp, uint256 amount);
     event rejectedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
     event approvedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
+
+    error Authorization__NotAdmin();
+
     address payable private _opsTreasury;
     address payable private _votingContract;
     bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
+    bytes32 public constant ADMIN_CUSTODIAN_ROLE = keccak256("ADMIN_CUSTODIAN_ROLE");
 
     // A donation is an amount and source pair to be approved donation by donation.
     struct Donation {
@@ -32,30 +36,36 @@ contract Authorization is Initializable, AccessControl {
     uint256[49] __gap;
 
     modifier onlyAdmin () {
-        require (hasRole(CUSTODIAN_ROLE, msg.sender)  , "Not an admin");
+        if (!hasRole(CUSTODIAN_ROLE, msg.sender)) {
+            revert Authorization__NotAdmin();
+        }
         _;
     }
 
+    function getOpsAddress() public view returns (address) {
+        return _opsTreasury;
+    }
+
     function initialize(address _admin, address payable _ops, address payable _voting) public initializer {
+        _setRoleAdmin(CUSTODIAN_ROLE, ADMIN_CUSTODIAN_ROLE);
         _grantRole(CUSTODIAN_ROLE, _admin);
+        _grantRole(ADMIN_CUSTODIAN_ROLE, _admin);
         _opsTreasury = _ops;
         _votingContract = _voting;
     }
 
-    function version() public pure returns (string memory) {
-        return "1.0";
+    // TODO - maybe create enumerable so that we check and never revoke all admins...
+    function grantAdmin(address _newAdmin) public onlyRole(CUSTODIAN_ROLE) {
+        _grantRole(CUSTODIAN_ROLE, _newAdmin);
+        _grantRole(ADMIN_CUSTODIAN_ROLE, _newAdmin);
+    }
+    function revokeAdmin(address _admin) public onlyRole(CUSTODIAN_ROLE) {
+        _revokeRole(CUSTODIAN_ROLE, _admin);
+        _revokeRole(ADMIN_CUSTODIAN_ROLE, _admin);
     }
 
-    function removeFromArray(address _benefactor) private {
-        for (uint256 i=0; i<donations.length;i++) {
-            if (donations[i].benefactor == _benefactor) {
-                for (uint256 j=i; j<donations.length-1; j++) {
-                    donations[j] = donations[j+1];
-                }
-                donations.pop();
-                return;
-            }
-        }
+    function version() public pure returns (string memory) {
+        return "1.0";
     }
 
     // Return an array of donators and an array of the amounts each that need to be processed.

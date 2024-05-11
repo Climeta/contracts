@@ -31,6 +31,12 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
     error ClimetaCore__NotAuthContract();
     error ClimetaCore__NotRayWallet();
     error ClimetaCore__NotAMember();
+    error ClimetaCore__NotApproved();
+    error ClimetaCore__NoProposal();
+    error ClimetaCore__AlreadyInRound();
+    error ClimetaCore__ProposalNotInRound();
+    error ClimetaCore__AlreadyVoted();
+    error ClimetaCore__NoVotes();
 
     // Structures
     struct Proposal {
@@ -46,7 +52,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
         string dataURI;
         bool approved;
     }
-    bytes32 constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
+    bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
 
     // Other important contract addresses
     address internal s_delMundoContract;
@@ -56,13 +62,13 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
     address private s_rayWallet;
 
     // TODO decide what to do if a brand changes address. Do we manage brand as a concept on chain?
-    uint256 private s_proposalId;
-    uint256 private s_votingRound;
+    uint256 public s_proposalId;
+    uint256 public s_votingRound;
 
     uint256 public s_totalDonatedAmount;
     mapping(address => uint256) public s_donations;
 
-    mapping(uint256 => Proposal) public s_proposals;
+    mapping(uint256 => Proposal) private s_proposals;
     uint256[] public s_proposalList;
 
     // Mapping to hold the beneficiary address and the data -
@@ -153,7 +159,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
         return hasRole(CUSTODIAN_ROLE, _isAdmin);
     }
 
-    function getRoleCount () public view returns(uint256) {
+    function getAdminCount () public view returns(uint256) {
         return getRoleMemberCount(CUSTODIAN_ROLE);
     }
 
@@ -180,9 +186,11 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
     }
     // TODO decide on whether we ever remove a charity
     function removeBeneficiary(address _beneficiary) external onlyAdmin {
-        s_beneficiaries[_beneficiary].approved = false;
-        s_beneficiaries[_beneficiary].name = "";
-        emit ClimetaCore__RemovedBeneficiary(_beneficiary);
+        if (s_beneficiaries[_beneficiary].approved == true) {
+            s_beneficiaries[_beneficiary].approved = false;
+            s_beneficiaries[_beneficiary].name = "";
+            emit ClimetaCore__RemovedBeneficiary(_beneficiary);
+        }
     }
     function isBeneficiary (address _beneficiary) external view returns (bool) {
         return (s_beneficiaries[_beneficiary].approved == true);
@@ -192,12 +200,11 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
         return s_proposals[proposalId];
     }
 
-    function getCurrentVotingRound() external view returns(uint256) {
-        return s_votingRound;
-    }
-
     // Allow the adding of proposals by the Admin group only
     function addProposal(address _beneficiary, string calldata _proposalURI) external onlyAdmin {
+        if (s_beneficiaries[_beneficiary].approved == false) {
+            revert ClimetaCore__NotApproved();
+        }
         uint256 m_proposalId = s_proposalId;
         s_proposals[m_proposalId] = Proposal(m_proposalId, _beneficiary, _proposalURI, 0);
         s_proposalList.push(m_proposalId);
@@ -205,12 +212,24 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
         s_proposalId++;
     }
 
+    function getAllProposals() external view returns (uint256[] memory) {
+        return s_proposalList;
+    }
+
     function updateProposal(uint256 _propId, string calldata _proposalURI) external onlyAdmin {
+        if (s_proposals[_propId].id == 0) {
+            revert ClimetaCore__NoProposal();
+        }
         s_proposals[_propId].metadataURI = _proposalURI;
     }
 
     function addProposalToVotingRound (uint256 _proposalId) external onlyAdmin {
-        require( s_proposals[_proposalId].votingRound == 0, "Already added to a voting round");
+        if (s_proposals[_proposalId].id == 0) {
+            revert ClimetaCore__NoProposal();
+        }
+        if (s_proposals[_proposalId].votingRound != 0) {
+            revert ClimetaCore__AlreadyInRound();
+        }
         uint256 m_votingRound = s_votingRound;
         // Mark the proposal as in the current voting round
         s_proposals[_proposalId].votingRound = m_votingRound;
@@ -221,7 +240,9 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
 
     function removeProposalFromVotingRound (uint256 _proposalId) external onlyAdmin {
         uint256 m_votingRound = s_votingRound;
-        require(s_proposals[_proposalId].votingRound == m_votingRound, "Proposal not in this round");
+        if (s_proposals[_proposalId].votingRound != m_votingRound) {
+            revert ClimetaCore__ProposalNotInRound();
+        }
         s_proposals[_proposalId].votingRound = 0;
         uint256 numberOfProposals = s_votingRoundProposals[m_votingRound].length;
         // remove from array of proposals for this voting round
@@ -249,7 +270,9 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
     function castVote(uint256 _propId) external onlyMember {
         // require proposal to be part of voting _votingRound
         uint256 m_votingRound = s_votingRound;
-        require (s_proposals[_propId].votingRound == m_votingRound, "Can't vote on a proposal not in this round");
+        if (s_proposals[_propId].votingRound != m_votingRound) {
+            revert ClimetaCore__ProposalNotInRound();
+        }
         // Get the token related to the caller
         uint256 _tokenId;
         address _addr;
@@ -257,7 +280,9 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
         (_ret, _addr, _tokenId) = RayWallet(payable(msg.sender)).token();
 
         // Ensure not already voted
-        require (s_votingRoundDelMundoVoters[m_votingRound][_tokenId] == false, "This RayDelMundo has already voted");
+        if (s_votingRoundDelMundoVoters[m_votingRound][_tokenId] == true) {
+            revert ClimetaCore__AlreadyVoted();
+        }
 
         // Add vote to vote history mapping to ensure single vote
         s_votingRoundDelMundoVoters[m_votingRound][_tokenId] = true;
@@ -279,7 +304,9 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable {
         for (uint256 i = 0; i < propIdsLength; i++) {
             totalVotes += s_votes[propIds[i]].length;
         }
-        require (totalVotes > 0, 'No votes on this round, need to extend voting period');
+        if (totalVotes == 0) {
+            revert ClimetaCore__NoVotes();
+        }
 
         // TODO will need a failsafe here in case anything fails. Might need to enable a withdraw function instead
         // TODO need to add in the 10% across all proposals

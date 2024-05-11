@@ -21,3 +21,5 @@ cache_hardhat/
 /lib/
 /.idea/
 /.github/
+/coverage/
+/coverage.json

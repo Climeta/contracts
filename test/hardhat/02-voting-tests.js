@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat")
 var chai = require("chai")
 var  chaiAsPromised = require("chai-as-promised")
-const { LazyMinter } = require( "../script/Voucher")
+const { LazyMinter } = require( "../../script/Voucher")
 const expect = chai.expect
 chai.use(chaiAsPromised)
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");

@@ -103,7 +103,7 @@ library MinimalProxyStore {
     }
 
     /**
-     * @dev Computes the address of a clone deployed using {MinimalProxyStore-cloneDeterministic}.
+     * @dev Computes the address of a clone deployed using {MinimalProxyStore.sol.sol-cloneDeterministic}.
      */
     function predictDeterministicAddress(
         address implementation,
@@ -117,7 +117,7 @@ library MinimalProxyStore {
     }
 
     /**
-     * @dev Computes the address of a clone deployed using {MinimalProxyStore-cloneDeterministic}.
+     * @dev Computes the address of a clone deployed using {MinimalProxyStore.sol.sol-cloneDeterministic}.
      */
     function predictDeterministicAddress(
         address implementation,
