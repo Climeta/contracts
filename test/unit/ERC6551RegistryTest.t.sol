@@ -5,9 +5,9 @@ import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import "../../src/ERC6551Registry.sol";
 import "../../src/RayWallet.sol";
 import "../../src/token/DelMundo.sol";
-import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.sol";
-import {DeployRayWallet} from "../../script/DeployRayWallet.sol";
-import {DeployDelMundo} from "../../script/DeployDelMundo.sol";
+import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.s.sol";
+import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
+import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 
 contract ERC6551RegistryTest is Test {
     ERC6551Registry registry;

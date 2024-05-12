@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import "../../src/token/Rayward.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
-import {DeployRayward} from "../../script/DeployRayward.sol";
+import {DeployRayward} from "../../script/DeployRayward.s.sol";
 
 contract RaywardTest is Test {
     Rayward rayward;

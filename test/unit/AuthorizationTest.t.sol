@@ -7,11 +7,11 @@ import "../../src/Authorization.sol";
 import "../../src/RayWallet.sol";
 import "../../src/token/DelMundo.sol";
 import "../../src/ERC6551Registry.sol";
-import {DeployAuthorization} from "../../script/DeployAuthorization.sol";
-import {DeployRayWallet} from "../../script/DeployRayWallet.sol";
-import {DeployDelMundo} from "../../script/DeployDelMundo.sol";
-import {DeployClimetaCore} from "../../script/DeployClimetaCore.sol";
-import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.sol";
+import {DeployAuthorization} from "../../script/DeployAuthorization.s.sol";
+import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
+import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
+import {DeployClimetaCore} from "../../script/DeployClimetaCore.s.sol";
+import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.s.sol";
 
 contract AuthorizationTest is Test {
     Authorization auth;
