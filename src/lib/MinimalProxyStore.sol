@@ -13,7 +13,7 @@ library MinimalProxyStore {
     error ContextOverflow();
 
     /**
-     * @dev Returns bytecode for a minmal proxy with additional context data appended to it
+     * @dev Returns bytecode for a minimal proxy with additional context data appended to it
      *
      * @param implementation the implementation this proxy will delegate to
      * @param context the data to be appended to the proxy
