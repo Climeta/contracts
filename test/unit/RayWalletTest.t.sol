@@ -2,18 +2,20 @@
 pragma solidity ^0.8.20;
 
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
-import "../../src/ERC6551Registry.sol";
 import "../../src/RayWallet.sol";
 import "../../src/token/DelMundo.sol";
-import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.s.sol";
+import {ERC6551Registry} from "@tokenbound/erc6551/ERC6551Registry.sol";
 import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {DeployTokenBoundRegistry} from "../../script/DeployTokenBoundRegistry.s.sol";
 
 import "../utils/CallTest.sol";
 
 
 contract RayWalletTest is Test, IERC721Receiver {
+    event TransactionExecuted(address indexed target, uint256 indexed value, bytes data);
+
     ERC6551Registry registry;
     RayWallet rayWallet;
     DelMundo delMundo;
@@ -26,7 +28,7 @@ contract RayWalletTest is Test, IERC721Receiver {
         callTest = new CallTest();
 
         admin = makeAddr("admin");
-        DeployERC6551Registry registryDeployer = new DeployERC6551Registry();
+        DeployTokenBoundRegistry registryDeployer = new DeployTokenBoundRegistry();
         registry = ERC6551Registry(registryDeployer.run());
 
         DeployRayWallet rayWalletDeployer = new DeployRayWallet();
@@ -54,12 +56,12 @@ contract RayWalletTest is Test, IERC721Receiver {
         delMundo.safeMint(address(this), "uri-0");
         delMundo.safeMint(user1, "uri-1");
         delMundo.safeMint(user2, "uri-2");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
-        address account1 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 1, 0, "");
-        address account2 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 2, 0, "");
-        assertEq(account0, registry.account(address(rayWallet), block.chainid, address(delMundo), 0, 0));
-        assertEq(account1, registry.account(address(rayWallet), block.chainid, address(delMundo), 1, 0));
-        assertEq(account2, registry.account(address(rayWallet), block.chainid, address(delMundo), 2, 0));
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+        address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
+        address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
+        assertEq(account0, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0));
+        assertEq(account1, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 1));
+        assertEq(account2, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 2));
 
         assertEq(RayWallet(payable(account0)).owner(), address(this));
         assertEq(RayWallet(payable(account1)).owner(), user1);
@@ -74,13 +76,13 @@ contract RayWalletTest is Test, IERC721Receiver {
 
     function test_ExecuteCall() public {
         delMundo.safeMint(admin, "ray-uri");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory callTestAbi = "callMe(uint256)";
         bytes memory callTestCallData = abi.encodeWithSignature(callTestAbi, 10);
         vm.startPrank(admin);
         vm.expectEmit(true, true, false, true);
-        emit IRayWallet.TransactionExecuted(address(callTest), 0, callTestCallData);
+        emit TransactionExecuted(address(callTest), 0, callTestCallData);
         RayWallet(payable(account0)).executeCall(address(callTest), 0, callTestCallData);
         vm.stopPrank();
         assertEq(callTest.lastCaller(), account0);
@@ -88,8 +90,8 @@ contract RayWalletTest is Test, IERC721Receiver {
     }
 
     function test_Token() public {
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
-        address account1 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 1, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+        address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
 
         (uint256 chainId, address tokenContract, uint256 tokenId) = RayWallet(payable(account0)).token();
         assertEq(chainId, block.chainid);
@@ -103,7 +105,7 @@ contract RayWalletTest is Test, IERC721Receiver {
 
     function test_Nonce() public {
         delMundo.safeMint(admin, "ray-uri");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory callTestAbi = "callMe(uint256)";
         bytes memory callTestCallData = abi.encodeWithSignature(callTestAbi, 10);
@@ -128,7 +130,7 @@ contract RayWalletTest is Test, IERC721Receiver {
     function test_IsValidSignature() public {
         (address signer, uint256 signerPk) = makeAddrAndKey("signer");
         delMundo.safeMint(signer, "ray-uri");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory clearText = "Hello, World!";
         bytes32 digest = keccak256(abi.encodePacked(clearText));
@@ -141,7 +143,7 @@ contract RayWalletTest is Test, IERC721Receiver {
         (address notSigner, uint256 notSignerPk) = makeAddrAndKey("not-signer");
         (address signer, uint256 signerPk) = makeAddrAndKey("signer");
         delMundo.safeMint(signer, "ray-uri");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory clearText = "Hello, World!";
         bytes32 digest = keccak256(abi.encodePacked(clearText));

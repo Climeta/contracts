@@ -6,15 +6,27 @@ import "../../src/Authorization.sol";
 import "../../src/RayWallet.sol";
 import "../../src/token/Rayward.sol";
 import "../../src/token/DelMundo.sol";
-import "../../src/ERC6551Registry.sol";
 import {DeployAuthorization} from "../../script/DeployAuthorization.s.sol";
 import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {DeployRayward} from "../../script/DeployRayward.s.sol";
 import {DeployClimetaCore} from "../../script/DeployClimetaCore.s.sol";
-import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.s.sol";
+import {DeployTokenBoundRegistry} from "../../script/DeployTokenBoundRegistry.s.sol";
 
 contract ClimetaCoreTest is Test {
+
+    // Events
+    event ClimetaCore__Payout(address _to, uint256 _amount, uint256 _votingRound);
+    event ClimetaCore__Vote(uint256 _votingNFT, uint256 _proposalId);
+    event ClimetaCore__NewProposal(address _benefactor, uint256 _proposalId, uint256 timestamp);
+    event ClimetaCore__ChangeProposal(address _benefactor, uint256 _proposalId, uint256 timestamp);
+    event ClimetaCore__ProposalIncluded(uint256 _votingRound, uint256 _proposalId);
+    event ClimetaCore__ProposalExcluded(uint256 _votingRound, uint256 _proposalId);
+    event ClimetaCore__NewBeneficiary(address _beneficiary, string name);
+    event ClimetaCore__RemovedBeneficiary(address _beneficiary);
+    event ClimetaCore__Donation(address _benefactor, uint256 timestamp, uint256 _amount);
+
+
     Authorization auth;
     address payable ops;
     address admin;
@@ -41,10 +53,10 @@ contract ClimetaCoreTest is Test {
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
         delMundo = DelMundo(delMundoDeployer.run(admin));
 
-        DeployERC6551Registry registryDeployer = new DeployERC6551Registry();
+        DeployTokenBoundRegistry registryDeployer = new DeployTokenBoundRegistry();
         registry = ERC6551Registry(registryDeployer.run());
 
-        address raysWallet = registry.account(address(rayWallet), block.chainid, address(delMundo), 0, 0);
+        address raysWallet = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         DeployClimetaCore climetaCoreDeployer = new DeployClimetaCore();
         climetaCore = ClimetaCore(payable(climetaCoreDeployer.run(admin, address(delMundo), address(rayward), address(registry), raysWallet)));
@@ -68,12 +80,80 @@ contract ClimetaCoreTest is Test {
         assertEq(climetaCore.getVoteReward(), VOTE_REWARD);
     }
 
+    function test_AddAdmin() public {
+        address newAdmin1 = makeAddr("new-admin1");
+        address newAdmin2 = makeAddr("new-admin2");
+        climetaCore.addAdmin(newAdmin1);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+        vm.prank(newAdmin1);
+        climetaCore.addAdmin(newAdmin2);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin2));
+    }
+
+    function test_RevokeAdmin() public {
+        address newAdmin1 = makeAddr("new-admin1");
+        address newAdmin2 = makeAddr("new-admin2");
+        climetaCore.addAdmin(newAdmin1);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+        climetaCore.revokeAdmin(newAdmin1);
+        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+
+        climetaCore.addAdmin(newAdmin1);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+        // Test add admin again that its not "registered" twice
+        climetaCore.addAdmin(newAdmin1);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+        climetaCore.revokeAdmin(newAdmin1);
+        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+        climetaCore.addAdmin(newAdmin1);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
+
+        // test revoke oneself works if there are others
+        vm.prank(admin);
+        climetaCore.revokeAdmin(admin);
+        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), admin));
+
+        climetaCore.revokeAdmin(address(this));
+
+        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
+        climetaCore.addAdmin(newAdmin2);
+
+        vm.prank(newAdmin1);
+        climetaCore.addAdmin(newAdmin2);
+        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin2));
+
+        vm.prank(newAdmin1);
+        climetaCore.revokeAdmin(newAdmin2);
+        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin2));
+
+        // Test that you can't remove the last admin
+        assertEq(climetaCore.getAdminCount(), 1);
+
+        vm.prank(newAdmin1);
+        vm.expectRevert(ClimetaCore.ClimetaCore__CannotRemoveLastAdmin.selector);
+        climetaCore.revokeAdmin(newAdmin1);
+
+    }
+
+    function testFuzz_Donate(uint256 amount) public {
+        deal(address(this), amount);
+        uint256 initialBalance = address(this).balance;
+        vm.expectRevert(ClimetaCore.ClimetaCore__NotFromAuthContract.selector);
+        climetaCore.donate{value: amount}(address(this));
+    }
+
     function test_TransferReverts() public {
         deal(address(this), 2 ether);
-        vm.expectRevert(ClimetaCore.ClimetaCore__NotAuthContract.selector);
+        vm.expectRevert();
         address(climetaCore).call{value: 1 ether}("");
+    }
 
-        // TODO - see what happens on contract destruct.
+    function test_TransferSelfDestruct() public {
+        AttackSelfDestructMe attacker = new AttackSelfDestructMe(climetaCore);
+        deal(address(attacker), 2 ether);
+
+        attacker.attack();
+        console.log("balance of climetaCore: ", address(climetaCore).balance);
     }
 
     function test_IsAdmin() public {
@@ -91,7 +171,7 @@ contract ClimetaCoreTest is Test {
         climetaCore.addBeneficiary(beneficiary1, "", "beneficiary1-uri");
 
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__NewBeneficiary(beneficiary1, "beneficiary1");
+        emit ClimetaCore__NewBeneficiary(beneficiary1, "beneficiary1");
         climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
         assertEq(climetaCore.isBeneficiary(beneficiary1), true);
 
@@ -101,13 +181,13 @@ contract ClimetaCoreTest is Test {
 
         // Add second beneficiary
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
+        emit ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
         climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
         assertEq(climetaCore.isBeneficiary(beneficiary2), true);
 
         // Remove second beneficiary
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__RemovedBeneficiary(beneficiary2);
+        emit ClimetaCore__RemovedBeneficiary(beneficiary2);
         climetaCore.removeBeneficiary(beneficiary2);
         assertEq(climetaCore.isBeneficiary(beneficiary2), false);
 
@@ -117,27 +197,27 @@ contract ClimetaCoreTest is Test {
 
         // Add second back in
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
+        emit ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
         climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
         assertEq(climetaCore.isBeneficiary(beneficiary2), true);
 
         // Remove both and add third time
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__RemovedBeneficiary(beneficiary1);
+        emit ClimetaCore__RemovedBeneficiary(beneficiary1);
         climetaCore.removeBeneficiary(beneficiary1);
         assertEq(climetaCore.isBeneficiary(beneficiary1), false);
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__RemovedBeneficiary(beneficiary2);
+        emit ClimetaCore__RemovedBeneficiary(beneficiary2);
         climetaCore.removeBeneficiary(beneficiary2);
         assertEq(climetaCore.isBeneficiary(beneficiary2), false);
 
         // Add both in again
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__NewBeneficiary(beneficiary1, "beneficiary1");
+        emit ClimetaCore__NewBeneficiary(beneficiary1, "beneficiary1");
         climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
         assertEq(climetaCore.isBeneficiary(beneficiary1), true);
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
+        emit ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
         climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
         assertEq(climetaCore.isBeneficiary(beneficiary2), true);
     }
@@ -170,7 +250,7 @@ contract ClimetaCoreTest is Test {
 
         // Expect block timestamp 1 and proposal id 1 for first ever proposal
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__NewProposal(beneficiary1, 1, 1);
+        emit ClimetaCore__NewProposal(beneficiary1, 1, 1);
         climetaCore.addProposal(beneficiary1, "proposal1-uri");
         assertEq(climetaCore.getProposal(1).beneficiaryAddress, beneficiary1);
         assertEq(climetaCore.getProposal(1).metadataURI, "proposal1-uri");
@@ -225,10 +305,10 @@ contract ClimetaCoreTest is Test {
 
         // Add the 2 in to current round
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__ProposalIncluded(1, 1);
+        emit ClimetaCore__ProposalIncluded(1, 1);
         climetaCore.addProposalToVotingRound(1);
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__ProposalIncluded(1, 2);
+        emit ClimetaCore__ProposalIncluded(1, 2);
         climetaCore.addProposalToVotingRound(2);
 
         assertEq(climetaCore.getProposalsThisRound().length, 2);
@@ -246,7 +326,7 @@ contract ClimetaCoreTest is Test {
         climetaCore.removeProposalFromVotingRound(3);
 
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__ProposalExcluded(1, 1);
+        emit ClimetaCore__ProposalExcluded(1, 1);
         climetaCore.removeProposalFromVotingRound(1);
         assertEq(climetaCore.getProposalsThisRound().length, 1);
         assertEq(climetaCore.getProposal(1).votingRound, 0);
@@ -289,10 +369,10 @@ contract ClimetaCoreTest is Test {
         delMundo.safeMint(user1, "uri-1");
         delMundo.safeMint(user2, "uri-2");
         delMundo.safeMint(user3, "uri-3");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
-        address account1 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 1, 0, "");
-        address account2 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 2, 0, "");
-        address account3 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 3, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+        address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
+        address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
+        address account3 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 3);
 
         // mint some raywards to ray for rewards and then approve.
         rayward.mint(account0, REWARDPOOL_INITIAL);
@@ -353,7 +433,7 @@ contract ClimetaCoreTest is Test {
         // Now user2 votes via his NFT
         vm.startPrank(user2);
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__Vote(2, 2);
+        emit ClimetaCore__Vote(2, 2);
         RayWallet(payable(account2)).executeCall(address(climetaCore), 0, voteFor2Data);
         vm.stopPrank();
         assertEq(climetaCore.getVotesForProposal(1).length, 1);
@@ -362,7 +442,7 @@ contract ClimetaCoreTest is Test {
 
         vm.startPrank(user3);
         vm.expectEmit();
-        emit ClimetaCore.ClimetaCore__Vote(3, 2);
+        emit ClimetaCore__Vote(3, 2);
         RayWallet(payable(account3)).executeCall(address(climetaCore), 0, voteFor2Data);
         vm.stopPrank();
         assertEq(climetaCore.getVotesForProposal(1).length, 1);
@@ -396,6 +476,11 @@ contract ClimetaCoreTest is Test {
         auth.approveDonation(brand2, 10 ether);
         vm.stopPrank();
 
+        // test that donation amounts are correct
+        assertEq(climetaCore.getTotalDonatedFunds(), 13.5 ether);
+        assertEq(climetaCore.getTotalDonationsByAddress(brand1), 4.5 ether);
+        assertEq(climetaCore.getTotalDonationsByAddress(brand2), 9 ether);
+
         address beneficiary1 = makeAddr("beneficiary1");
         climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
         climetaCore.addProposal(beneficiary1, "proposal1-uri");
@@ -414,9 +499,9 @@ contract ClimetaCoreTest is Test {
         delMundo.safeMint(admin, "uri-ray"); // This is Ray himself
         delMundo.safeMint(user1, "uri-1");
         delMundo.safeMint(user2, "uri-2");
-        address account0 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 0, 0, "");
-        address account1 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 1, 0, "");
-        address account2 = registry.createAccount(address(rayWallet), block.chainid, address(delMundo), 2, 0, "");
+        address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+        address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
+        address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
 
         // mint some raywards to ray for rewards and then approve.
         rayward.mint(account0, REWARDPOOL_INITIAL);
@@ -457,5 +542,18 @@ contract ClimetaCoreTest is Test {
         // Test balance is 10% of total split between the two beneficiaries and then rest to #1
         assertEq(beneficiary1.balance, 12825000000000000000);
         assertEq(beneficiary2.balance, 675000000000000000);
+    }
+}
+
+
+contract AttackSelfDestructMe {
+    ClimetaCore target;
+
+    constructor(ClimetaCore _target) payable {
+        target = _target;
+    }
+
+    function attack() external payable {
+        selfdestruct(payable(address(target)));
     }
 }

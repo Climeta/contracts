@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./ClimetaCore.sol";
 
 /// @title Climeta donation gateway to control incoming flow
@@ -11,11 +12,11 @@ import "./ClimetaCore.sol";
 /// @notice This will be an upgradeable contract
 /// @dev bugbounty contact mysaviour@climeta.io
 
-contract Authorization is Initializable, AccessControl {
+contract Authorization is Initializable, AccessControl, ReentrancyGuard {
 
-    event donation(address indexed _benefactor, uint256 timestamp, uint256 amount);
-    event rejectedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
-    event approvedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
+    event Authorization_Donation(address indexed _benefactor, uint256 timestamp, uint256 amount);
+    event Authorization_RejectedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
+    event Authorization_ApprovedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
 
     error Authorization__NotAdmin();
 
@@ -23,6 +24,8 @@ contract Authorization is Initializable, AccessControl {
     address payable private _votingContract;
     bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
     bytes32 public constant ADMIN_CUSTODIAN_ROLE = keccak256("ADMIN_CUSTODIAN_ROLE");
+    uint64 public constant OPS_PERCENTAGE = 10;
+    uint64 public constant FUND_PERCENTAGE = 90;
 
     // A donation is an amount and source pair to be approved donation by donation.
     struct Donation {
@@ -84,22 +87,31 @@ contract Authorization is Initializable, AccessControl {
         _opsTreasury = _ops;
     }
 
-    function approveDonation(address _approvedAddress, uint256 _amount) public onlyAdmin {
+    function approveDonation(address _approvedAddress, uint256 _amount) external onlyAdmin {
         for (uint256 i=0; i<donations.length;i++) {
             if ((donations[i].benefactor == _approvedAddress) && (donations[i].amount == _amount)) {
                 for (uint256 j=i; j<donations.length-1; j++) {
                     donations[j] = donations[j+1];
                 }
                 donations.pop();
-                payable(_opsTreasury).call{value:_amount * 10/100}("");
-                ClimetaCore(_votingContract).donate{value: _amount * 90/100}(_approvedAddress);
-                emit approvedDonation(_approvedAddress, block.timestamp, _amount);
+                payable(_opsTreasury).call{value:_amount * OPS_PERCENTAGE/100}("");
+                ClimetaCore(_votingContract).donate{value: _amount * FUND_PERCENTAGE/100}(_approvedAddress);
+                emit Authorization_ApprovedDonation(_approvedAddress, block.timestamp, _amount);
                 return;
             }
         }
     }
 
-    function rejectDonation(address _rejectedAddress, uint256 _amount) public onlyAdmin {
+    function approveAllDonations() external onlyAdmin nonReentrant {
+        for (uint256 i=0; i<donations.length;i++) {
+            payable(_opsTreasury).call{value:donations[i].amount * OPS_PERCENTAGE/100}("");
+            ClimetaCore(_votingContract).donate{value: donations[i].amount * FUND_PERCENTAGE/100}(donations[i].benefactor);
+            emit Authorization_ApprovedDonation(donations[i].benefactor, block.timestamp, donations[i].amount);
+        }
+        delete donations;
+    }
+
+    function rejectDonation(address _rejectedAddress, uint256 _amount) external onlyAdmin {
         for (uint256 i=0; i<donations.length;i++) {
             if ((donations[i].benefactor == _rejectedAddress) && (donations[i].amount == _amount)) {
                 for (uint256 j=i; j<donations.length-1; j++) {
@@ -107,7 +119,7 @@ contract Authorization is Initializable, AccessControl {
                 }
                 donations.pop();
                 payable(_rejectedAddress).call{value:_amount}("");
-                emit rejectedDonation(_rejectedAddress, block.timestamp, _amount);
+                emit Authorization_RejectedDonation(_rejectedAddress, block.timestamp, _amount);
                 return;
             }
         }
@@ -116,6 +128,6 @@ contract Authorization is Initializable, AccessControl {
     // Got sent some ETH
     receive() external payable {
         donations.push(Donation(msg.sender, msg.value));
-        emit donation(msg.sender, block.timestamp, msg.value);
+        emit Authorization_Donation(msg.sender, block.timestamp, msg.value);
     }
 }

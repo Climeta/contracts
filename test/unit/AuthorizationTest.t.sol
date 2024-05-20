@@ -3,15 +3,14 @@ pragma solidity ^0.8.20;
 
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import "../../lib/forge-std/src/Vm.sol";
-import "../../src/Authorization.sol";
+import {Authorization} from "../../src/Authorization.sol";
+import {ClimetaCore} from "../../src/ClimetaCore.sol";
 import "../../src/RayWallet.sol";
 import "../../src/token/DelMundo.sol";
-import "../../src/ERC6551Registry.sol";
 import {DeployAuthorization} from "../../script/DeployAuthorization.s.sol";
 import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {DeployClimetaCore} from "../../script/DeployClimetaCore.s.sol";
-import {DeployERC6551Registry} from "../../script/DeployERC6551Registry.s.sol";
 
 contract AuthorizationTest is Test {
     Authorization auth;
@@ -19,8 +18,8 @@ contract AuthorizationTest is Test {
     address admin;
     RayWallet rayWallet;
     DelMundo delMundo;
-    ERC6551Registry registry;
     ClimetaCore climetaCore;
+    event Authorization_Donation(address indexed _benefactor, uint256 timestamp, uint256 amount);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -32,11 +31,8 @@ contract AuthorizationTest is Test {
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
         delMundo = DelMundo(delMundoDeployer.run(admin));
 
-        DeployERC6551Registry registryDeployer = new DeployERC6551Registry();
-        registry = ERC6551Registry(registryDeployer.run());
-
         DeployClimetaCore climetaCoreDeployer = new DeployClimetaCore();
-        climetaCore = ClimetaCore(payable(climetaCoreDeployer.run(admin, address(delMundo), address(delMundo), address(registry), address(rayWallet))));
+        climetaCore = ClimetaCore(payable(climetaCoreDeployer.run(admin, address(delMundo), address(delMundo), makeAddr("registry"), address(rayWallet))));
 
         DeployAuthorization authorizationDeployer = new DeployAuthorization();
         auth = Authorization(payable(authorizationDeployer.run(admin, ops, payable(address(climetaCore)))));
@@ -82,17 +78,16 @@ contract AuthorizationTest is Test {
     function testFuzz_donation(uint256 amount) public payable {
         deal(address(this), amount);
         uint256 initialBalance = address(this).balance;
-        vm.expectEmit();
-        emit Authorization.donation(address(this), 1, amount);
         address(auth).call{value: amount}("");
         assertEq(address(this).balance, initialBalance - amount);
     }
 
     function test_approveDonation() public payable {
-        deal(address(this), 2 ether);
+        address me = address(this);
+        deal(me, 2 ether);
 
         vm.expectEmit();
-        emit Authorization.donation(address(this), 1, 1 ether);
+        emit Authorization_Donation(me, 1, 1 ether);
         address(auth).call{value: 1 ether}("");
 
         uint256 s_opsBalance = ops.balance;
@@ -106,7 +101,7 @@ contract AuthorizationTest is Test {
     function test_rejectDonation() public payable {
         deal(address(this), 2 ether);
         vm.expectEmit();
-        emit Authorization.donation(address(this), 1, 1 ether);
+        emit Authorization_Donation(address(this), 1, 1 ether);
         address(auth).call{value: 1 ether}("");
         uint256 s_opsBalance = ops.balance;
         uint256 s_votingBalance = address(climetaCore).balance;
@@ -117,13 +112,13 @@ contract AuthorizationTest is Test {
         assertEq(addresses.length, 0);
     }
 
-    // This test donates 1 eth and then tries all non 1 eth comvinations to make sure we don't approve.
+    // This test donates 1 eth and then tries non 1 eth combinations to make sure we don't approve.
     function test_approveNonExistentDonation(uint256 amount) public {
         vm.assume(amount != 1 ether);
 
         deal(address(this), 2 ether);
         vm.expectEmit();
-        emit Authorization.donation(address(this), 1, 1 ether);
+        emit Authorization_Donation(address(this), 1, 1 ether);
         address(auth).call{value: 1 ether}("");
 
         vm.recordLogs();
@@ -141,7 +136,7 @@ contract AuthorizationTest is Test {
         vm.assume(amount != 1 ether);
         deal(address(this), 2 ether);
         vm.expectEmit();
-        emit Authorization.donation(address(this), 1, 1 ether);
+        emit Authorization_Donation(address(this), 1, 1 ether);
         address(auth).call{value: 1 ether}("");
 
         vm.recordLogs();
@@ -167,6 +162,7 @@ contract AuthorizationTest is Test {
         vm.startPrank(brand1);
         address(auth).call{value: 1 ether}("");
         address(auth).call{value: 1 ether}("");
+        address(auth).call{value: 1 ether}("");
         vm.stopPrank();
 
         vm.startPrank(brand2);
@@ -175,9 +171,19 @@ contract AuthorizationTest is Test {
         vm.stopPrank();
 
         (address[] memory addresses, uint256[] memory amounts) = auth.getAllPendingDonations();
-        assertEq(addresses.length, 4);
+        assertEq(addresses.length, 5);
+
+        // Test ApproveAll now
+        vm.prank(admin);
+        auth.approveAllDonations();
+
+        (addresses, amounts) = auth.getAllPendingDonations();
+        assertEq(addresses.length, 0);
+
+        assertEq(ops.balance, 1 ether);
+        assertEq(address(climetaCore).balance, 9 ether);
+
     }
 
-    // TODO Invariant tests to make sure that any combination of donations and approvals/rejections is sound, even 2 donations from same address for same amount
 
 }

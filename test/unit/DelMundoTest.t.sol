@@ -11,6 +11,10 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract DelMundoTest is Test, IERC721Receiver, EIP712 {
+
+    event minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
+
+
     DelMundo private delMundo;
     uint256 private tokenIdToTest = 0;
     address payable private treasury;
@@ -157,26 +161,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.redeem{value: prices}(tamperedVoucher);
     }
 
-//    function expectCustomError(bytes4 selector, function() external func) public {
-//        (bool success,) = address(this).call(abi.encodeWithSignature("executeCall(function() external)", func));
-//        if (success) {
-//            fail("Expected revert not received");
-//        }
-//
-//        string memory message = vm.error();
-//        bytes4 errorSelector = bytes4(keccak256(bytes(message.substring(0, message.indexOf("(")))));
-//        if (errorSelector != selector) {
-//            fail("Revert reason didn't match expected error");
-//        }
-//    }
-//
-//    function executeCall(function() external func) public {
-//        func();
-//    }
-
     function test_SafeMint() public {
         vm.expectEmit(true, false, false, true, address(delMundo));
-        emit DelMundo.minted(0, tokenUriToTest, address(this));
+        emit minted(0, tokenUriToTest, address(this));
         delMundo.safeMint(address(this), tokenUriToTest);
         assertEq(delMundo.ownerOf(tokenIdToTest), address(this));
         assertEq(delMundo.tokenURI(tokenIdToTest), tokenUriToTest);
