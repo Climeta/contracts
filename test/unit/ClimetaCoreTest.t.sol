@@ -36,9 +36,9 @@ contract ClimetaCoreTest is Test {
     ClimetaCore climetaCore;
     Rayward rayward;
 
-    uint256 constant VOTE_REWARD = 100;
+    uint256 constant VOTE_REWARD = 100000000000;            // 100 raywards
     uint256 constant VOTE_MULTIPLIER = 1;
-    uint256 constant REWARDPOOL_INITIAL = 10000;
+    uint256 constant REWARDPOOL_INITIAL = 10000000000000;   // 10000 raywards
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -77,7 +77,7 @@ contract ClimetaCoreTest is Test {
     }
 
     function test_VoteReward() public {
-        assertEq(climetaCore.getVoteReward(), VOTE_REWARD);
+        assertEq(climetaCore.s_voteReward(), VOTE_REWARD);
     }
 
     function test_AddAdmin() public {
@@ -455,7 +455,7 @@ contract ClimetaCoreTest is Test {
         assertEq(rayward.balanceOf(account3), VOTE_REWARD);
     }
 
-    function testEndVotingRound() public {
+    function test_EndVotingRound() public {
         // Set up vote!
 
         // Get donations in
@@ -535,12 +535,36 @@ contract ClimetaCoreTest is Test {
 
         climetaCore.endVotingRound();
 
-        // test the voting round has been incremented and all the balance sent to charities
+        // test the voting round has been incremented
         assertEq(climetaCore.s_votingRound(), 2);
-        assertEq(address(climetaCore).balance, 0);
+        // balance should still be 15.5 ether as nothing has been pushed or withdrawn yet
+        assertEq(address(climetaCore).balance, 13.5 ether);
+
+        // ensure only owner can get funds
+        assertEq(climetaCore.getWithdrawAmount(beneficiary1),12825000000000000000);
+        assertEq(climetaCore.getWithdrawAmount(beneficiary2),675000000000000000);
+        assertEq(climetaCore.getWithdrawAmount(user1),0);
+
+        vm.prank(user1);
+        vm.expectRevert(ClimetaCore.ClimetaCore__NoFundsToWithdraw.selector);
+        climetaCore.withdraw();
+
+        vm.startPrank(beneficiary1);
+        uint256 gas_start = gasleft();
+        climetaCore.withdraw();
+        uint256 gas_used = gas_start - gasleft();
+        assertEq(beneficiary1.balance, 12825000000000000000-(gas_used*tx.gasprice));
+        vm.stopPrank();
+
+        vm.startPrank(beneficiary2);
+        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
+        climetaCore.pushPayment(beneficiary2);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        climetaCore.pushPayment(beneficiary2);
 
         // Test balance is 10% of total split between the two beneficiaries and then rest to #1
-        assertEq(beneficiary1.balance, 12825000000000000000);
         assertEq(beneficiary2.balance, 675000000000000000);
     }
 }

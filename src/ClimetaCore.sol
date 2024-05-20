@@ -76,6 +76,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     error ClimetaCore__AlreadyVoted();
     error ClimetaCore__NoVotes();
     error ClimetaCore__NotFromAuthContract();
+    error ClimetaCore__NoFundsToWithdraw();
 
     // Structures
     struct Proposal {
@@ -95,6 +96,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
     bytes32 public constant CUSTODIAN_ADMIN_ROLE = keccak256("CUSTODIAN_ADMIN_ROLE");
     uint64 public constant EVERYONE_PERCENTAGE = 10;
+    uint256 public constant INITIAL_VOTE_REWARD = 100000000000; // 100 Rayward
 
     // Other important contract addresses
     address internal s_delMundoContract;
@@ -165,6 +167,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
         s_rayWallet = _rayWalletAddress;
         s_rayRegistry = _rayRegistryAddress;
         s_votingRound = 1;
+        s_voteReward = INITIAL_VOTE_REWARD;
     }
 
     /// @notice Returns the version of the contract
@@ -406,10 +409,10 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
         // Add vote to vote history mapping and mark as voted to ensure single vote
         s_votingRoundDelMundoVoters[m_votingRound][_tokenId] = true;
         s_votes[_propId].push(_tokenId);
+        emit ClimetaCore__Vote(_tokenId, _propId);
 
         // Send Raywards
         Rayward(s_raywardContract).transferFrom(s_rayWallet, _caller, s_voteReward * getVoterMultiplier(_tokenId));
-        emit ClimetaCore__Vote(_tokenId, _propId);
     }
 
     /**
@@ -466,6 +469,9 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     */
     function withdraw() external {
         uint256 amount = s_withdrawls[msg.sender];
+        if (amount == 0) {
+            revert ClimetaCore__NoFundsToWithdraw();
+        }
         s_withdrawls[msg.sender] = 0;
         emit ClimetaCore__Payout(msg.sender, amount);
         payable(msg.sender).call{value: amount}("");
@@ -473,11 +479,12 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
 
     /**
     * @dev Allows Climeta admins to push the funds directly to the beneficaries
+    *
     * This is really for those beneficiaries that may not be able to withdraw themselves for whatever reason.
-    * This does not give Cliemta access to the voting funds, once marked as vote end, the only place the funds can go
+    * This does not give Climeta access to the voting funds, once marked as vote end, the only place the funds can go
     * is to the beneficiary.
     *
-    * @param _beneficiary The ID of the proposal to vote on
+    * @param _beneficiary The ID of the charity to push the payment to
     */
     function pushPayment(address _beneficiary) external onlyAdmin nonReentrant {
         uint256 amount = s_withdrawls[_beneficiary];
@@ -503,13 +510,17 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     }
 
     /**
-    * @dev Donations should only come from approved sources. There is no receive or fallback for that very purpose. Each donation
-    * is vertting via the Authorisation contract as we do not accept donations from just anyone.
-    * Yes we accept that if someone self destructs a contract, the funds will get wrapped up and distributed to the projects
+    * @dev Donations should only come from approved sources, ie the Authorization contract. There is no receive or fallback
+    * for that very purpose.
+    * Each donation is coming via the Authorisation contract as we do not accept donations from just anyone.
+    *
+    * The 90/10 split is done on approval in the Auth contract.
+    *
+    * We accept that if someone self-destructs a contract, the funds will get wrapped up and distributed to the projects
     * but it will not be registered as a formal donation, the funds will just get sent out anonymously and not tracked.
     *
     * Each donation is logged formally for tracking and transparency as a key component of fund flow. An event is emitted
-    * so these can be tracked off chain too.
+    * so these can be tracked off chain too, self-destruct aside.
     *
     * @param _benefactor The ID of the donator.
     */
