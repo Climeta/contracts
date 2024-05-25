@@ -4,10 +4,10 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./ClimetaCore.sol";
 
-/**
+/*
  * @title Climeta donation gateway to control incoming flow
  * @author matt@climeta.io
  * @notice This will be an upgradeable contract
@@ -17,7 +17,7 @@ import "./ClimetaCore.sol";
  * Anyone self-destructing to this contract will lose their funds.
  * The contract will take a 10% fee (OPS_PERCENTAGE) and the rest will be sent to the voting contract.
  */
-contract Authorization is Initializable, AccessControl, ReentrancyGuard {
+contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeable {
 
     event Authorization_Donation(address indexed _benefactor, uint256 timestamp, uint256 amount);
     event Authorization_RejectedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);

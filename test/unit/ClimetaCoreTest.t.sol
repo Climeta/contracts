@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
+import {StdInvariant} from "../../lib/forge-std/src/StdInvariant.sol";
 import "../../src/Authorization.sol";
 import "../../src/RayWallet.sol";
 import "../../src/token/Rayward.sol";
@@ -13,7 +14,7 @@ import {DeployRayward} from "../../script/DeployRayward.s.sol";
 import {DeployClimetaCore} from "../../script/DeployClimetaCore.s.sol";
 import {DeployTokenBoundRegistry} from "../../script/DeployTokenBoundRegistry.s.sol";
 
-contract ClimetaCoreTest is Test {
+contract ClimetaCoreTest is Test, StdInvariant {
 
     // Events
     event ClimetaCore__Payout(address _to, uint256 _amount, uint256 _votingRound);
@@ -70,6 +71,8 @@ contract ClimetaCoreTest is Test {
         auth.grantAdmin(current);
         climetaCore.addAdmin(current);
         vm.stopPrank();
+
+        targetContract(address(climetaCore));
     }
 
     function test_Version() public {
@@ -78,6 +81,10 @@ contract ClimetaCoreTest is Test {
 
     function test_VoteReward() public {
         assertEq(climetaCore.s_voteReward(), VOTE_REWARD);
+    }
+
+    function statefulFuzz_ClimetaCore() public {
+
     }
 
     function test_AddAdmin() public {

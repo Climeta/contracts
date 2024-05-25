@@ -68,8 +68,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         assert(!delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
     }
 
-
-
     function test_CurrentMaxSupply() public view {
         assertEq(delMundo.currentMaxSupply(), MAX_SUPPLY);
     }

@@ -8,13 +8,13 @@ import "./RayWallet.sol";
 import "@tokenbound/erc6551/ERC6551Registry.sol";
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /// @title Main Climeta community fund management and voting contract
 /// @author matt@climeta.io
 /// @notice This will be an upgradeable contract
 /// @dev bugbounty contact mysaviour@climeta.io
-contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, ReentrancyGuard {
+contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, ReentrancyGuardUpgradeable {
 
     // Events
     /// @notice Emitted when a payout is made

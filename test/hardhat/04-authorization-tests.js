@@ -5,7 +5,7 @@ const expect = chai.expect
 chai.use(chaiAsPromised)
 
 const CHAINID = process.env.BLOCKCHAIN_ID
-const NOT_AUTH_CONTRACT = "ClimetaCore__NotAuthContract"
+const NOT_AUTH_CONTRACT = " function selector was not recognized and there's no fallback nor receive function"
 
 //TODO: Put some actual assertions in here - its all output only at the moment, requires review.
 
@@ -13,11 +13,11 @@ async function deploy() {
     const [custodian, rayOwner, founder1, founder2, founder3, beneficiary1, beneficiary2, member1, member2, member3, member4, benefactor1, benefactor2, benefactor3 , treasury] = await ethers.getSigners()
 
     let RAYWARD = await ethers.getContractFactory("Rayward")
-    const rayward = await RAYWARD.deploy()
+    const rayward = await RAYWARD.deploy(await custodian.getAddress())
     await rayward.waitForDeployment();
 
     let RAYDELMUNDO = await ethers.getContractFactory("DelMundo")
-    const rayNFT = await RAYDELMUNDO.deploy()
+    const rayNFT = await RAYDELMUNDO.deploy(await custodian.getAddress())
     await rayNFT.waitForDeployment()
 
     console.log("Deploying Registry/Account contracts")

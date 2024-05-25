@@ -3,33 +3,42 @@ var chai = require("chai")
 var  chaiAsPromised = require("chai-as-promised")
 const expect = chai.expect
 const { LazyMinter } = require( "../../script/Voucher")
-const {toNumber} = require("ethers");
+const {toNumber, Typed} = require("ethers");
 chai.use(chaiAsPromised)
 
 const CHAINID = process.env.BLOCKCHAIN_ID
 const NOT_AN_ADMIN = "ClimetaCore__NotAdmin"
 const NOT_WALLET_OWNER = "ClimetaCore__NotRayWallet"
+const salt = ethers.encodeBytes32String("0")
 
 async function deploy() {
     const [custodian, rayOwner, founder1, founder2, founder3, beneficiary1, beneficiary2, member1, member2, member3, member4, benefactor1, benefactor2, treasury] = await ethers.getSigners()
 
     let RAYWARD = await ethers.getContractFactory("Rayward")
-    const rayward = await RAYWARD.deploy()
+    const rayward = await RAYWARD.deploy(await custodian.getAddress())
     await rayward.waitForDeployment();
 
     let RAYDELMUNDO = await ethers.getContractFactory("DelMundo")
-    const rayNFT = await RAYDELMUNDO.deploy()
+    const rayNFT = await RAYDELMUNDO.deploy(await custodian.getAddress())
     await rayNFT.waitForDeployment()
 
     console.log("Deploying Registry/Account contracts")
     let Registry = await ethers.getContractFactory("ERC6551Registry")
     const erc6551registry = await Registry.deploy()
     await erc6551registry.waitForDeployment()
+    console.log("Registry deployed at " + await erc6551registry.getAddress())
     let Account = await ethers.getContractFactory("RayWallet")
     const erc6551account = await Account.deploy()
     await erc6551account.waitForDeployment()
+    console.log("Account deployed at " + await erc6551account.getAddress())
 
-    const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0, )
+    const r_address = await erc6551registry.getAddress()
+    const delMundoAddress = await rayNFT.getAddress()
+    const r_account = await erc6551account.getAddress()
+
+    const account0address = await erc6551registry.account(r_account, salt, CHAINID, delMundoAddress, 0)
+
+    console.log("the ray wallet is going to be : " + account0address)
 
     console.log("Deploying climeta core")
     let ClimetaCore = await ethers.getContractFactory("ClimetaCore");
@@ -45,7 +54,7 @@ async function deploy() {
 
 
     let TestRewardContract = await ethers.getContractFactory("TestReward")
-    const testContract = await TestRewardContract.deploy(await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0), await rayward.getAddress())
+    const testContract = await TestRewardContract.deploy(account0address, await rayward.getAddress())
     await testContract.waitForDeployment()
 
     return {
@@ -154,26 +163,29 @@ describe("Token Bound Testing suite", function (accounts) {
         const erc6551accountAddress = await erc6551account.getAddress()
         const rayNFTAddress = await rayNFT.getAddress()
         const emptyArray = new Uint8Array([])
-        let account0 = await erc6551registry.createAccount(erc6551accountAddress, CHAINID, rayNFTAddress, 0, 0, "0x")
-        let account1 = await erc6551registry.createAccount(erc6551accountAddress, CHAINID, rayNFTAddress, 1, 0, "0x")
-        let account2 = await erc6551registry.createAccount(erc6551accountAddress, CHAINID, rayNFTAddress, 2, 0, "0x")
-        let account3 = await erc6551registry.createAccount(erc6551accountAddress, CHAINID, rayNFTAddress, 3, 0, "0x")
-        let account4 = await erc6551registry.createAccount(erc6551accountAddress, CHAINID, rayNFTAddress, 4, 0, "0x")
+        const account0 = await erc6551registry.createAccount(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 0)
+        const account1 = await erc6551registry.createAccount(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 1)
+        const account2 = await erc6551registry.createAccount(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 2)
+        const account3 = await erc6551registry.createAccount(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 3)
+        const account4 = await erc6551registry.createAccount(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 4)
 
-        let account3address = await erc6551registry.account(erc6551accountAddress, CHAINID, rayNFTAddress, 3, 0)
+        let account3address = await erc6551registry.account(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 3)
 
 
         console.log("Created smart accounts for NFTs")
-        const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0, )
-        const account0contract = await ethers.getContractAt("RayWallet", account0address, custodian)
-        const account1address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0)
-        const account1contract = await ethers.getContractAt("RayWallet", account1address, custodian)
+        const account0address = await erc6551registry.account(erc6551accountAddress, salt, CHAINID, rayNFTAddress, 0)
+        const account0contract = await ethers.getContractAt("RayWallet", account0address)
 
         console.log("Sending some ETH to Ray from custodian")
         await custodian.sendTransaction({to: account0address, value: ethers.parseEther("20.0"),})
         console.log("Balance of " + account0address + " is " + await provider.getBalance(account0address))
 
+        console.log("Balance of the account address back from account0contract :" + await account0contract.getAddress() + " is " + await provider.getBalance(await account0contract.getAddress()))
+
         console.log("Sending some ETH back to custodian from Ray")
+        console.log("Created address : " + account0address)
+        console.log("Owner of delmundo 0 : " + await rayNFT.ownerOf(0))
+        console.log("rayOwner address : " + await rayOwner.getAddress())
         await account0contract.connect(rayOwner).executeCall(await custodian.getAddress(), ethers.parseEther("1.0"), "0x")
 
         // Check that no-one other than owner can access the tokenbound account
@@ -182,7 +194,7 @@ describe("Token Bound Testing suite", function (accounts) {
         console.log("Balance of " + account0address + " is " + await provider.getBalance(account0address))
 
         console.log("Minting some PDBs and giving them to Ray")
-        const rayWalletAddress = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+        const rayWalletAddress = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
         await rayward.mint(rayWalletAddress, 1000)
         expect(toNumber(await rayward.balanceOf(account0address))).to.equal(1000)
 
@@ -235,14 +247,14 @@ describe("Token Bound Testing suite", function (accounts) {
         await rayNFT.connect(member4).redeem(voucher4, {value: ethers.parseEther("0.1")})
 
         console.log("Creating smart accounts for NFTs")
-        const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0, "0x")
-        const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0, "0x")
-        const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0, "0x")
-        const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0, "0x")
-        const account4 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 4, 0, "0x")
-        const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+        const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
+        const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 1)
+        const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 2)
+        const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 3)
+        const account4 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 4)
+        const account0address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
         const account0contract = await ethers.getContractAt("RayWallet", account0address, custodian)
-        const account1address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0)
+        const account1address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 1)
         const account1contract = await ethers.getContractAt("RayWallet", account1address, custodian)
 
         console.log("Minting some Raywards and giving them to Ray")
@@ -312,18 +324,18 @@ describe("Token Bound Testing suite", function (accounts) {
         await rayNFT.connect(member4).redeem(voucher4, {value: ethers.parseEther("0.1")})
 
         console.log("Creating smart accounts for NFTs")
-        const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0, "0x")
-        const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0, "0x")
-        const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0, "0x")
-        const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0, "0x")
-        const account4 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 4, 0, "0x")
-        const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+        const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
+        const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 1)
+        const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 2)
+        const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 3)
+        const account4 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 4)
+        const account0address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
         const account0contract = await ethers.getContractAt("RayWallet", account0address, custodian)
-        const account1address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0)
+        const account1address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 1)
         const account1contract = await ethers.getContractAt("RayWallet", account1address, custodian)
-        const account2address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0)
+        const account2address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 2)
         const account2contract = await ethers.getContractAt("RayWallet", account2address, custodian)
-        const account3address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0)
+        const account3address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 3)
         const account3contract = await ethers.getContractAt("RayWallet", account3address, custodian)
 
         console.log("Try moving ray to various raywallets.")

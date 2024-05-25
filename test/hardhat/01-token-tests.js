@@ -11,11 +11,11 @@ async function deploy() {
     const [custodian, member1, member2, member3, member4] = await ethers.getSigners()
 
     let factory = await ethers.getContractFactory("DelMundo")
-    const contract = await factory.deploy()
+    const contract = await factory.deploy(await custodian.getAddress())
     await contract.waitForDeployment();
 
     let repFactory = await ethers.getContractFactory("Rayputation")
-    const repcontract = await repFactory.deploy()
+    const repcontract = await repFactory.deploy(await custodian.getAddress())
     await repcontract.waitForDeployment();
 
     return {
@@ -35,8 +35,9 @@ describe("Token Testing suite", function (accounts) {
     })
 
     it("Should deploy", async function() {
+        const [custodian] = await ethers.getSigners()
         const LazyNFT = await ethers.getContractFactory("DelMundo");
-        const lazynft = await LazyNFT.deploy();
+        const lazynft = await LazyNFT.deploy(await custodian.getAddress());
         await lazynft.waitForDeployment();
         console.log("Deployed")
     });
@@ -148,7 +149,7 @@ describe("Token Testing suite", function (accounts) {
         await repcontract.mint(await member1.getAddress(), 10);
         await repcontract.mint(await member2.getAddress(), 10);
 
-        await expect(repcontract.connect(member1).transfer(await member2.getAddress(), 5)).to.be.rejectedWith("These tokens cannot be transferred, only earned")
+        await expect(repcontract.connect(member1).transfer(await member2.getAddress(), 5)).to.be.rejectedWith("Rayputation__NotMinter()")
 
     })
 })
