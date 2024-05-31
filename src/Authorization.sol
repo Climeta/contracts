@@ -24,6 +24,7 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     event Authorization_ApprovedDonation(address indexed _benefactor, uint256 timestamp, uint256 amount);
 
     error Authorization__NotAdmin();
+    error Authorization_DonationTooSmall(address, uint256);
 
     address payable private _opsTreasury;
     address payable private _votingContract;
@@ -31,6 +32,7 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     bytes32 public constant ADMIN_CUSTODIAN_ROLE = keccak256("ADMIN_CUSTODIAN_ROLE");
     uint64 public constant OPS_PERCENTAGE = 10;
     uint64 public constant FUND_PERCENTAGE = 90;
+    uint256 public constant STARTING_MINIMUM = 1e18;
 
     // A donation is an amount and source pair to be approved donation by donation.
     struct Donation {
@@ -38,7 +40,12 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
         uint256 amount;
     }
 
-    Donation[] public donations;
+    Donation[] public s_donations;
+    /**
+     *   @dev This is really to try and prevent spamming of small amounts into the donations array that would need
+     *   processing.
+    */
+    uint256 public s_minimum_donation;
 
     // gap param for storage blocking
     uint256[49] __gap;
@@ -62,6 +69,13 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     }
 
     /**
+    * @dev Simple setter to manage the minimmum as we evolve
+    * @param _minimum The new minimmum
+    */
+    function setMinimumDonation(uint256 _minimum) external onlyAdmin {
+        s_minimum_donation = _minimum;
+    }
+    /**
     * @dev Initializer for this upgradeable contract.
     * @param _admin The address of the admin to be set as the first admin.
     * @param _ops The address of the ops treasury.
@@ -74,6 +88,7 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
         _grantRole(ADMIN_CUSTODIAN_ROLE, _admin);
         _opsTreasury = _ops;
         _votingContract = _voting;
+        s_minimum_donation = STARTING_MINIMUM;
     }
 
     /**
@@ -106,11 +121,12 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     * @return _amounts An array of amounts donated.
     */
     function getAllPendingDonations() public view returns (address[] memory, uint256[] memory) {
-        uint256[] memory _amounts = new uint256[](donations.length);
-        address[] memory _benefactors = new address[](donations.length);
-        for (uint256 i=0; i<donations.length;i++) {
-            _amounts[i]= donations[i].amount;
-            _benefactors[i] = donations[i].benefactor;
+        uint256 d_length = s_donations.length;
+        uint256[] memory _amounts = new uint256[](d_length);
+        address[] memory _benefactors = new address[](d_length);
+        for (uint256 i=0; i<d_length;i++) {
+            _amounts[i]= s_donations[i].amount;
+            _benefactors[i] = s_donations[i].benefactor;
         }
         return (_benefactors, _amounts);
     }
@@ -134,12 +150,13 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     * @param _amount The specific amount determining the donation  of the beneficiary to approve
     */
     function approveDonation(address _approvedAddress, uint256 _amount) external onlyAdmin {
-        for (uint256 i=0; i<donations.length;i++) {
-            if ((donations[i].benefactor == _approvedAddress) && (donations[i].amount == _amount)) {
-                for (uint256 j=i; j<donations.length-1; j++) {
-                    donations[j] = donations[j+1];
+        uint256 d_length = s_donations.length;
+        for (uint256 i=0; i<d_length;i++) {
+            if ((s_donations[i].benefactor == _approvedAddress) && (s_donations[i].amount == _amount)) {
+                for (uint256 j=i; j<d_length-1; j++) {
+                    s_donations[j] = s_donations[j+1];
                 }
-                donations.pop();
+                s_donations.pop();
                 payable(_opsTreasury).call{value:_amount * OPS_PERCENTAGE/100}("");
                 ClimetaCore(_votingContract).donate{value: _amount * FUND_PERCENTAGE/100}(_approvedAddress);
                 emit Authorization_ApprovedDonation(_approvedAddress, block.timestamp, _amount);
@@ -154,12 +171,12 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     * reentrancy guard in place, just to be on the safe side. The extra gas is no big deal and this function will not be used all the time
     */
     function approveAllDonations() external onlyAdmin nonReentrant {
-        for (uint256 i=0; i<donations.length;i++) {
-            payable(_opsTreasury).call{value:donations[i].amount * OPS_PERCENTAGE/100}("");
-            ClimetaCore(_votingContract).donate{value: donations[i].amount * FUND_PERCENTAGE/100}(donations[i].benefactor);
-            emit Authorization_ApprovedDonation(donations[i].benefactor, block.timestamp, donations[i].amount);
+        for (uint256 i=0; i<s_donations.length;i++) {
+            payable(_opsTreasury).call{value:s_donations[i].amount * OPS_PERCENTAGE/100}("");
+            ClimetaCore(_votingContract).donate{value: s_donations[i].amount * FUND_PERCENTAGE/100}(s_donations[i].benefactor);
+            emit Authorization_ApprovedDonation(s_donations[i].benefactor, block.timestamp, s_donations[i].amount);
         }
-        delete donations;
+        delete s_donations;
     }
 
     /**
@@ -172,12 +189,13 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     * @param _amount The specific amount determining the donation  of the beneficiary to reject
     */
     function rejectDonation(address _rejectedAddress, uint256 _amount) external onlyAdmin {
-        for (uint256 i=0; i<donations.length;i++) {
-            if ((donations[i].benefactor == _rejectedAddress) && (donations[i].amount == _amount)) {
-                for (uint256 j=i; j<donations.length-1; j++) {
-                    donations[j] = donations[j+1];
+        uint256 d_length = s_donations.length;
+        for (uint256 i=0; i<d_length;i++) {
+            if ((s_donations[i].benefactor == _rejectedAddress) && (s_donations[i].amount == _amount)) {
+                for (uint256 j=i; j<d_length-1; j++) {
+                    s_donations[j] = s_donations[j+1];
                 }
-                donations.pop();
+                s_donations.pop();
                 payable(_rejectedAddress).call{value:_amount}("");
                 emit Authorization_RejectedDonation(_rejectedAddress, block.timestamp, _amount);
                 return;
@@ -191,7 +209,10 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     * in Climeta we need to action. This should be the only contract with a receive/fallback.
     */
     receive() external payable {
-        donations.push(Donation(msg.sender, msg.value));
+        if (msg.value < s_minimum_donation) {
+            revert Authorization_DonationTooSmall(msg.sender, msg.value);
+        }
+        s_donations.push(Donation(msg.sender, msg.value));
         emit Authorization_Donation(msg.sender, block.timestamp, msg.value);
     }
 }

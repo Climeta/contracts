@@ -53,9 +53,9 @@ contract RayWalletTest is Test, IERC721Receiver {
     }
 
     function test_Ownership() public {
-        delMundo.safeMint(address(this), "uri-0");
-        delMundo.safeMint(user1, "uri-1");
-        delMundo.safeMint(user2, "uri-2");
+        delMundo.safeMint(address(this), 0, "uri-0");
+        delMundo.safeMint(user1, 1, "uri-1");
+        delMundo.safeMint(user2, 2, "uri-2");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
         address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
         address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
@@ -75,7 +75,7 @@ contract RayWalletTest is Test, IERC721Receiver {
     }
 
     function test_ExecuteCall() public {
-        delMundo.safeMint(admin, "ray-uri");
+        delMundo.safeMint(admin, 0, "ray-uri");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory callTestAbi = "callMe(uint256)";
@@ -104,7 +104,7 @@ contract RayWalletTest is Test, IERC721Receiver {
     }
 
     function test_Nonce() public {
-        delMundo.safeMint(admin, "ray-uri");
+        delMundo.safeMint(admin, 0, "ray-uri");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory callTestAbi = "callMe(uint256)";
@@ -129,7 +129,7 @@ contract RayWalletTest is Test, IERC721Receiver {
 
     function test_IsValidSignature() public {
         (address signer, uint256 signerPk) = makeAddrAndKey("signer");
-        delMundo.safeMint(signer, "ray-uri");
+        delMundo.safeMint(signer, 0, "ray-uri");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory clearText = "Hello, World!";
@@ -142,7 +142,7 @@ contract RayWalletTest is Test, IERC721Receiver {
     function test_IsNotValidSignature() public {
         (address notSigner, uint256 notSignerPk) = makeAddrAndKey("not-signer");
         (address signer, uint256 signerPk) = makeAddrAndKey("signer");
-        delMundo.safeMint(signer, "ray-uri");
+        delMundo.safeMint(signer, 0, "ray-uri");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
         string memory clearText = "Hello, World!";

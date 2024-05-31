@@ -14,7 +14,7 @@ import {DeployRayward} from "../../script/DeployRayward.s.sol";
 import {DeployClimetaCore} from "../../script/DeployClimetaCore.s.sol";
 import {DeployTokenBoundRegistry} from "../../script/DeployTokenBoundRegistry.s.sol";
 
-contract ClimetaCoreTest is Test, StdInvariant {
+contract ClimetaCoreTest is Test {
 
     // Events
     event ClimetaCore__Payout(address _to, uint256 _amount, uint256 _votingRound);
@@ -372,10 +372,10 @@ contract ClimetaCoreTest is Test, StdInvariant {
 
         // Mint NFTs to members directly and create the erc6551 raywallets
         vm.startPrank(admin);
-        delMundo.safeMint(admin, "uri-ray"); // This is Ray himself
-        delMundo.safeMint(user1, "uri-1");
-        delMundo.safeMint(user2, "uri-2");
-        delMundo.safeMint(user3, "uri-3");
+        delMundo.safeMint(admin, 0, "uri-ray"); // This is Ray himself
+        delMundo.safeMint(user1, 1, "uri-1");
+        delMundo.safeMint(user2, 2, "uri-2");
+        delMundo.safeMint(user3, 3, "uri-3");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
         address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
         address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
@@ -503,9 +503,9 @@ contract ClimetaCoreTest is Test, StdInvariant {
 
         // Mint NFTs to members directly and create the erc6551 raywallets
         vm.startPrank(admin);
-        delMundo.safeMint(admin, "uri-ray"); // This is Ray himself
-        delMundo.safeMint(user1, "uri-1");
-        delMundo.safeMint(user2, "uri-2");
+        delMundo.safeMint(admin, 0, "uri-ray"); // This is Ray himself
+        delMundo.safeMint(user1, 1, "uri-1");
+        delMundo.safeMint(user2, 2, "uri-2");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
         address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
         address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);

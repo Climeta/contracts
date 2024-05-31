@@ -13,6 +13,8 @@ import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {DeployClimetaCore} from "../../script/DeployClimetaCore.s.sol";
 
 contract AuthorizationTest is Test {
+    uint256 public s_minimum = 1e18;
+
     Authorization auth;
     address payable ops;
     address admin;
@@ -67,6 +69,23 @@ contract AuthorizationTest is Test {
         assertEq(auth.getOpsAddress(), newOps);
     }
 
+    function test_updateMinimumDonation() public {
+        uint256 newMinimum = 10 ether;
+        auth.setMinimumDonation(newMinimum);
+        assertEq(auth.s_minimum_donation(), newMinimum);
+
+        vm.deal(address(this), 20 ether);
+        vm.expectRevert();
+        address(auth).call{value: 9 ether}("");
+
+        address(auth).call{value: 10 ether}("");
+
+        vm.startPrank(makeAddr("random"));
+        vm.expectRevert(Authorization.Authorization__NotAdmin.selector);
+        auth.setMinimumDonation(1 ether);
+        assertEq(auth.s_minimum_donation(), newMinimum);
+    }
+
     function test_updateOpsAddressIsSecure() public {
         address newOps = makeAddr("newOps");
         address user = makeAddr("randomUser");
@@ -78,8 +97,13 @@ contract AuthorizationTest is Test {
     function testFuzz_donation(uint256 amount) public payable {
         deal(address(this), amount);
         uint256 initialBalance = address(this).balance;
-        address(auth).call{value: amount}("");
-        assertEq(address(this).balance, initialBalance - amount);
+        if (amount >= s_minimum) {
+            address(auth).call{value: amount}("");
+            assertEq(address(this).balance, initialBalance - amount);
+        } else {
+            vm.expectRevert();
+            address(auth).call{value: amount}("");
+        }
     }
 
     function test_approveDonation() public payable {
@@ -87,25 +111,25 @@ contract AuthorizationTest is Test {
         deal(me, 2 ether);
 
         vm.expectEmit();
-        emit Authorization_Donation(me, 1, 1 ether);
-        address(auth).call{value: 1 ether}("");
+        emit Authorization_Donation(me, 1, s_minimum);
+        address(auth).call{value: s_minimum}("");
 
         uint256 s_opsBalance = ops.balance;
         uint256 s_votingBalance = address(climetaCore).balance;
-        auth.approveDonation(address(this), 1 ether);
+        auth.approveDonation(address(this), s_minimum);
 
-        assertEq(ops.balance - s_opsBalance, 1 ether / 10);
-        assertEq(address(climetaCore).balance - s_votingBalance, 1 ether * 9 / 10);
+        assertEq(ops.balance - s_opsBalance, s_minimum / 10);
+        assertEq(address(climetaCore).balance - s_votingBalance, s_minimum * 9 / 10);
     }
 
     function test_rejectDonation() public payable {
         deal(address(this), 2 ether);
         vm.expectEmit();
-        emit Authorization_Donation(address(this), 1, 1 ether);
-        address(auth).call{value: 1 ether}("");
+        emit Authorization_Donation(address(this), 1, s_minimum);
+        address(auth).call{value: s_minimum}("");
         uint256 s_opsBalance = ops.balance;
         uint256 s_votingBalance = address(climetaCore).balance;
-        auth.rejectDonation(address(this), 1 ether);
+        auth.rejectDonation(address(this), s_minimum);
         assertEq(ops.balance - s_opsBalance, 0);
         assertEq(address(climetaCore).balance - s_votingBalance, 0);
         (address[] memory addresses, uint256[] memory amounts) = auth.getAllPendingDonations();
@@ -113,16 +137,15 @@ contract AuthorizationTest is Test {
     }
 
     // This test donates 1 eth and then tries non 1 eth combinations to make sure we don't approve.
-    function test_approveNonExistentDonation(uint256 amount) public {
-        vm.assume(amount != 1 ether);
-
+    function test_approveNonExistentDonation(uint256 amountToApprove) public {
+        vm.assume(amountToApprove != 1 ether);
         deal(address(this), 2 ether);
         vm.expectEmit();
         emit Authorization_Donation(address(this), 1, 1 ether);
         address(auth).call{value: 1 ether}("");
 
         vm.recordLogs();
-        auth.approveDonation(address(this), amount);
+        auth.approveDonation(address(this), amountToApprove);
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
         // Check logs to make sure no approval was made
@@ -160,9 +183,9 @@ contract AuthorizationTest is Test {
         deal(brand3, 20 ether);
 
         vm.startPrank(brand1);
-        address(auth).call{value: 1 ether}("");
-        address(auth).call{value: 1 ether}("");
-        address(auth).call{value: 1 ether}("");
+        address(auth).call{value: s_minimum}("");
+        address(auth).call{value: s_minimum}("");
+        address(auth).call{value: s_minimum}("");
         vm.stopPrank();
 
         vm.startPrank(brand2);
@@ -180,7 +203,7 @@ contract AuthorizationTest is Test {
         (addresses, amounts) = auth.getAllPendingDonations();
         assertEq(addresses.length, 0);
 
-        assertEq(ops.balance, 1 ether);
+        assertEq(ops.balance, s_minimum);
         assertEq(address(climetaCore).balance, 9 ether);
 
     }

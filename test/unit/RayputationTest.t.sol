@@ -18,12 +18,13 @@ contract RayputationTest is Test {
         rayputation = Rayputation(payable(rayputationDeployer.run(admin)));
     }
 
-    function test_RayputationDecimals() public {
+    function test_RayputationDecimals() public view {
         assertEq(rayputation.decimals(), DECIMALS);
     }
 
     function testFuzz_RayputationMint(uint256 amount, address luckyPerson) public {
         vm.assume(luckyPerson != admin);
+        vm.assume(luckyPerson != address(0));
         vm.prank(admin);
         rayputation.mint(luckyPerson, amount);
         assertEq(rayputation.balanceOf(luckyPerson), amount);
@@ -49,7 +50,7 @@ contract RayputationTest is Test {
         vm.stopPrank();
     }
 
-    function test_NameSymbol() public {
+    function test_NameSymbol() public view {
         assertEq(rayputation.name(), "Rayputation");
         assertEq(rayputation.symbol(), "RAYPUTATION");
     }
