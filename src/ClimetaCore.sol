@@ -77,6 +77,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     error ClimetaCore__NoVotes();
     error ClimetaCore__NotFromAuthContract();
     error ClimetaCore__NoFundsToWithdraw();
+    error ClimetaCore__ProposalHasVotes();
 
     // Structures
     struct Proposal {
@@ -330,6 +331,12 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
         if (s_proposals[_proposalId].votingRound != m_votingRound) {
             revert ClimetaCore__ProposalNotInRound();
         }
+        // If the proposal already has votes - can't remove
+        if (s_votes[_proposalId].length != 0) {
+            revert ClimetaCore__ProposalHasVotes();
+        }
+
+
         s_proposals[_proposalId].votingRound = 0;
 
         uint256 numberOfProposals = s_votingRoundProposals[m_votingRound].length;

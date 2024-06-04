@@ -83,10 +83,6 @@ contract ClimetaCoreTest is Test {
         assertEq(climetaCore.s_voteReward(), VOTE_REWARD);
     }
 
-    function statefulFuzz_ClimetaCore() public {
-
-    }
-
     function test_AddAdmin() public {
         address newAdmin1 = makeAddr("new-admin1");
         address newAdmin2 = makeAddr("new-admin2");

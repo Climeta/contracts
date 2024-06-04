@@ -6,6 +6,7 @@ const expect = chai.expect
 chai.use(chaiAsPromised)
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const {getAddress} = require("ethers");
+const BigNumber = require("bignumber.js");
 require('dotenv').config();
 
 const CHAINID = process.env.BLOCKCHAIN_ID
@@ -349,10 +350,30 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
     await climetaCore.endVotingRound()
 
-    // Test to make sure all fund has been dispatched.
-    expect ((await provider.getBalance(await charity1.getAddress())).toString()).to.equal("10023250000000000000000")
-    expect ((await provider.getBalance(await charity2.getAddress())).toString()).to.equal("10063750000000000000000")
-    expect ((await provider.getBalance(await charity3.getAddress())).toString()).to.equal("10003000000000000000000")
+    expect ((await provider.getBalance(await charity1.getAddress())).toString()).to.equal("10000000000000000000000")
+    expect ((await provider.getBalance(await charity2.getAddress())).toString()).to.equal("10000000000000000000000")
+    expect ((await provider.getBalance(await charity3.getAddress())).toString()).to.equal("10000000000000000000000")
+
+    // Charities now withdraw their funds
+    // Need to work out the gas cost as well to do the test checks
+
+    let transactionResponse = await climetaCore.connect(charity1).withdraw()
+    let receipt = await transactionResponse.wait()
+    let gasPrice = transactionResponse.gasPrice
+    let cost = gasPrice * receipt.gasUsed
+    expect ((await provider.getBalance(await charity1.getAddress()) + cost).toString()).to.equal("10023250000000000000000")
+
+    transactionResponse = await climetaCore.connect(charity2).withdraw()
+    receipt = await transactionResponse.wait()
+    gasPrice = transactionResponse.gasPrice
+    cost = gasPrice * receipt.gasUsed
+    expect ((await provider.getBalance(await charity2.getAddress()) + cost).toString()).to.equal("10063750000000000000000")
+
+    transactionResponse = await climetaCore.connect(charity3).withdraw()
+    receipt = await transactionResponse.wait()
+    gasPrice = transactionResponse.gasPrice
+    cost = gasPrice * receipt.gasUsed
+    expect ((await provider.getBalance(await charity3.getAddress()) + cost).toString()).to.equal("10003000000000000000000")
 
     // Test to make sure all fund has been dispatched
     expect(await provider.getBalance(await climetaCore.getAddress())).to.equal(0)
@@ -376,7 +397,7 @@ describe("ClimetaCore Testing Suite", function (accounts) {
     await authContract.connect(custodian).approveDonation(await benefactor1.getAddress(), ethers.parseEther("26.0"))
 
     // Test no votes simply exits with error message
-    await expect(climetaCore.endVotingRound()).to.be.eventually.be.rejectedWith("No votes on this round, need to extend voting period")
+    await expect(climetaCore.endVotingRound()).to.be.eventually.be.rejectedWith("ClimetaCore__NoVotes")
 
     // Vote
     voteFor6 = iface.encodeFunctionData("castVote", [6])
@@ -391,9 +412,14 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
     console.log("Charity 1 before round 2 : " + ethers.formatEther(await provider.getBalance(await charity1.getAddress()) ))
     console.log("Charity 3 before round 2 : " + ethers.formatEther(await provider.getBalance(await charity3.getAddress()) ))
+    let charity1balance = await provider.getBalance(await charity1.getAddress())
+
     await climetaCore.endVotingRound()
-    console.log("Charity 1 after round 2 : " + ethers.formatEther(await provider.getBalance(await charity1.getAddress()) ))
-    console.log("Charity 3 after round 2 : " + ethers.formatEther(await provider.getBalance(await charity3.getAddress()) ))
+
+    // Test the push of funds to the charities
+    await climetaCore.connect(custodian).pushPayment(await charity1.getAddress())
+    expect ((await provider.getBalance(await charity1.getAddress())) > charity1balance).to.be.true
+    // TODO need to check the gas cost of the transaction and be more thorough.
 
   });
 

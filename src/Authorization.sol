@@ -15,7 +15,8 @@ import "./ClimetaCore.sol";
  * @dev This contract accepts donations and then the admins can either accept or reject. This allows control over who
  * can actually partake in Climeta's project funding and prevent unwanted donations.
  * Anyone self-destructing to this contract will lose their funds.
- * The contract will take a 10% fee (OPS_PERCENTAGE) and the rest will be sent to the voting contract.
+ * The contract will send a 10% fee (OPS_PERCENTAGE) to the operations treasury contract
+  * and the rest will be sent to the voting contract.
  */
 contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeable {
 
@@ -151,15 +152,15 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     */
     function approveDonation(address _approvedAddress, uint256 _amount) external onlyAdmin {
         uint256 d_length = s_donations.length;
-        for (uint256 i=0; i<d_length;i++) {
+        for (uint256 i=0; i < d_length ;i++) {
             if ((s_donations[i].benefactor == _approvedAddress) && (s_donations[i].amount == _amount)) {
-                for (uint256 j=i; j<d_length-1; j++) {
+                for (uint256 j=i; j < d_length-1; j++) {
                     s_donations[j] = s_donations[j+1];
                 }
                 s_donations.pop();
-                payable(_opsTreasury).call{value:_amount * OPS_PERCENTAGE/100}("");
-                ClimetaCore(_votingContract).donate{value: _amount * FUND_PERCENTAGE/100}(_approvedAddress);
                 emit Authorization_ApprovedDonation(_approvedAddress, block.timestamp, _amount);
+                ClimetaCore(_votingContract).donate{value: _amount * FUND_PERCENTAGE/100}(_approvedAddress);
+                payable(_opsTreasury).call{value:_amount * OPS_PERCENTAGE/100}("");
                 return;
             }
         }
@@ -172,9 +173,9 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     */
     function approveAllDonations() external onlyAdmin nonReentrant {
         for (uint256 i=0; i<s_donations.length;i++) {
+            emit Authorization_ApprovedDonation(s_donations[i].benefactor, block.timestamp, s_donations[i].amount);
             payable(_opsTreasury).call{value:s_donations[i].amount * OPS_PERCENTAGE/100}("");
             ClimetaCore(_votingContract).donate{value: s_donations[i].amount * FUND_PERCENTAGE/100}(s_donations[i].benefactor);
-            emit Authorization_ApprovedDonation(s_donations[i].benefactor, block.timestamp, s_donations[i].amount);
         }
         delete s_donations;
     }
@@ -207,6 +208,7 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
     * @dev When we receive a donation, we store in a struct and push into an array where Climeta can review and determine to accept it or not.
     * We emit a specific event as well for off chain notification and just because we are state changing and its an event
     * in Climeta we need to action. This should be the only contract with a receive/fallback.
+    * We have a minimum to prevent small donation spamming.
     */
     receive() external payable {
         if (msg.value < s_minimum_donation) {

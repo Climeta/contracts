@@ -13,4 +13,4 @@ seed = "0x2"
 [invariant]
 runs = 1000
 depth = 15
-fail_on_revert = false
+fail_on_revert = true
