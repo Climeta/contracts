@@ -2,6 +2,8 @@
 
 ## Summary
 
+
+
 ## Install
 
 Install the contract dependencies:
@@ -45,3 +47,12 @@ sequenceDiagram
     NFTWallet->>LoginPage: Verify Ownership of NFT
     LoginPage->>User: Login Successful
 ```
+
+### Invariants
+
+ * Ray is the only one who gives out raywards
+ * total supply of DelMundos is never more than DelMundo.s_currentMaxSupply
+ * Ray (DelMundo tokenID 0) should always have enough reward tokens to distribute.
+ * No DelMundo can vote more than once per voting round
+ * Rayputation can only be earned, not traded
+ * 

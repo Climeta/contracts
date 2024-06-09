@@ -28,17 +28,19 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     error DelMundo__IncorrectSigner();
     error DelMundo__InsufficientFunds();
     error DelMundo__SoldOut();
+    error DelMundo__TooMany();
     error DelMundo__AlreadyMinted();
-    error DelMundo_NullAddressError();
+    error DelMundo__NullAddressError();
+    error DelMundo__CannotMoveToDelMundoWallet();
 
     bytes32 public constant RAY_ROLE = keccak256("RAY_ROLE");
     string public constant SIGNING_DOMAIN = "RayNFT-Voucher";
     string public constant SIGNATURE_VERSION = "1";
     bytes4 constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
 
-    uint256 public s_maxPerWalletAmount = 20;
+    uint256 public s_maxPerWalletAmount = 5;
     uint256 public s_currentMaxSupply = 1000;
-    mapping (uint256 => bool) s_isTokenMinted;
+    mapping (uint256 => bool) public s_isTokenMinted;
 
     struct NFTVoucher {
         uint256 tokenId;
@@ -131,16 +133,15 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
      * @param voucher NFTVoucher struct containing tokenId, ipfs metadatauri, price and the typed data signature.
      */
     function redeem(NFTVoucher calldata voucher) external payable returns (uint256) {
-        if (s_isTokenMinted[voucher.tokenId]) {
-            revert DelMundo__AlreadyMinted();
-        }
-
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
-
         // make sure that the signer is authorized to mint NFTs
         if (!hasRole(RAY_ROLE, signer)) {
             revert DelMundo__IncorrectSigner();
+        }
+
+        if (s_isTokenMinted[voucher.tokenId]) {
+            revert DelMundo__AlreadyMinted();
         }
 
         // make sure that the redeemer is paying enough to cover the price
@@ -152,6 +153,27 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
         if (supply > s_currentMaxSupply) {
             revert DelMundo__SoldOut();
         }
+
+        uint256 totalOwned = tokensOfOwner(msg.sender).length;
+        if (totalOwned >= s_maxPerWalletAmount) {
+            revert DelMundo__TooMany();
+        }
+
+//        if (voucher.tokenId == 2) {
+//            _mint(signer, 10001);
+//            _mint(signer, 10002);
+//            _mint(signer, 10003);
+//            _mint(signer, 10004);
+//            _mint(signer, 10005);
+//            _mint(signer, 10006);
+//            _mint(signer, 10007);
+//            _mint(signer, 10008);
+//            _mint(signer, 10009);
+//            _mint(signer, 10010);
+//            _mint(signer, 10011);
+//            _mint(signer, 10012);
+//
+//        }
 
         s_isTokenMinted[voucher.tokenId] = true;
         // first assign the token to the signer, to establish provenance on-chain
@@ -198,7 +220,9 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
 
     function _update (address to, uint256 tokenId, address auth) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) returns(address) {
         bool isDelMundoWallet = ERC165Checker.supportsInterface(to, I_AM_DELMUNDO_WALLET);
-        require(!isDelMundoWallet, "Cannot transfer to a Del Mundo wallet");
+        if (isDelMundoWallet) {
+            revert DelMundo__CannotMoveToDelMundoWallet();
+        }
         return super._update(to, tokenId, auth);
     }
 
@@ -213,7 +237,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
 
     function withdraw(address payable account) public payable onlyRay {
         if (account == address(0)) {
-            revert DelMundo_NullAddressError();
+            revert DelMundo__NullAddressError();
         }
         (bool success, ) = payable(account).call{value:address(this).balance}("");
         require(success,"Withdraw failed");

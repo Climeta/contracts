@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {VmSafe} from "../../lib/forge-std/src/Vm.sol";
 import {DelMundo} from "../../src/token/DelMundo.sol";
+import {RayWallet} from "../../src/RayWallet.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -13,7 +14,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
     event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
-
+    event Transfer(address from,address to ,uint256 tokenId);
 
     DelMundo private delMundo;
     address payable private treasury;
@@ -51,6 +52,16 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.addAdmin(current);
 
         treasury = payable(makeAddr("treasury"));
+    }
+
+    function test_publicVariables() public view {
+        assertEq(delMundo.s_maxPerWalletAmount(), 20);
+        assertEq(delMundo.s_currentMaxSupply(), 1000);
+        assertFalse(delMundo.s_isTokenMinted(0));
+    }
+
+    function testFuzz_publicVariables(uint256 tokenid) public view {
+        assertFalse(delMundo.s_isTokenMinted(tokenid));
     }
 
     function test_AddAdmin() public {
@@ -116,6 +127,11 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         address user1 = makeAddr("user1");
         vm.deal(user1, 10 ether);
         vm.prank(user1);
+        vm.expectEmit(true,true,true,false);
+        emit Transfer(address(0), admin, 2);
+        emit Transfer(admin, user1, 2);
+        emit Transfer(admin, user1, 2);
+        emit DelMundo__Minted(2, "https://token.uri2/", user1);
         delMundo.redeem{value: 2 ether}(voucher2);
         assertEq(delMundo.ownerOf(voucher2.tokenId), user1);
 
@@ -131,10 +147,45 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.redeem{value: 1 ether}(voucher1);
         assertEq(delMundo.ownerOf(voucher1.tokenId), user2);
 
+        delMundo.updateMaxPerWalletAmount(1);
+        assertEq(delMundo.tokensOfOwner(user1).length, 1);
+
+        vm.prank(user1);
+        vm.expectRevert(DelMundo.DelMundo__TooMany.selector);
+        delMundo.redeem{value: 1 ether}(voucher3);
+
+        delMundo.updateMaxPerWalletAmount(0);
+        vm.prank(user1);
+        vm.expectRevert(DelMundo.DelMundo__TooMany.selector);
+        delMundo.redeem{value: 1 ether}(voucher3);
+
+        delMundo.updateMaxPerWalletAmount(2);
         vm.prank(user1);
         delMundo.redeem{value: 1 ether}(voucher3);
         assertEq(delMundo.ownerOf(voucher3.tokenId), user1);
+        assertEq(delMundo.tokensOfOwner(user1).length, 2);
+    }
 
+    function test_transferToDifferentWallets() public {
+        delMundo.safeMint(address(this), 1, tokenUriToTest);
+        address userB = makeAddr("userB");
+        delMundo.transferFrom(address(this), userB, 1);
+        assertEq(delMundo.ownerOf(1), userB);
+    }
+
+    function test_transferToRayWallet() public {
+        delMundo.safeMint(address(this), 1, tokenUriToTest);
+        RayWallet raywallet1 = new RayWallet();
+        console.log("Raywallet is one? ", raywallet1.iAmADelMundoWallet());
+        vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
+        delMundo.transferFrom(address(this), address(raywallet1), 1);
+        vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
+        delMundo.safeTransferFrom(address(this), address(raywallet1), 1);
+
+        delMundo.approve(address(raywallet1), 1);
+        vm.prank(address(raywallet1));
+        vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
+        delMundo.transferFrom(address(this), address(raywallet1), 1);
 
     }
 
@@ -214,6 +265,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.safeMint(address(this), 10, tokenUriToTest2);
         assertEq(delMundo.ownerOf(10), address(this));
         assertEq(delMundo.tokenURI(10), tokenUriToTest2);
+
+        // Some ERC721 tests
+        assertEq(delMundo.balanceOf(address(this)), 2);
     }
 
     function test_SafeMintWithoutPermision() public {
@@ -282,6 +336,12 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.renounceRole(delMundo.RAY_ROLE(), address(this));
         vm.expectRevert();
         delMundo.withdraw(payable(address(this)));
+    }
+
+    function test_WithdrawWithNullAddress() public {
+        deal(address(delMundo), 10 ether);
+        vm.expectRevert(DelMundo.DelMundo__NullAddressError.selector);
+        delMundo.withdraw(payable(address(0)));
     }
 
     function test_SetContractURI() public {
