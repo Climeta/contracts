@@ -2,15 +2,17 @@ const { ethers, upgrades } = require("hardhat")
 var chai = require("chai")
 var  chaiAsPromised = require("chai-as-promised")
 const expect = chai.expect
-const { LazyMinter } = require( "../nft/nft-generator/lib/LazyMinter")
+const { LazyMinter } = require( "../../script/Voucher")
 const {toNumber} = require("ethers");
 chai.use(chaiAsPromised)
+
+const CHAINID = process.env.BLOCKCHAIN_ID
 
 
 async function deploy() {
     const [custodian, member1] = await ethers.getSigners()
 
-    let nftFactory = await ethers.getContractFactory("RayDelMundo")
+    let nftFactory = await ethers.getContractFactory("DelMundo")
     const delMundo = await nftFactory.deploy()
     await delMundo.waitForDeployment();
 
@@ -32,10 +34,10 @@ async function deploy() {
 
     console.log("Wardrobe impl address :" + await wardrobe.getAddress())
 
-    const wallet0 = await erc6551registry.createAccount(await wallet.getAddress(), 1337, await delMundo.getAddress(), 0, 0, "0x")
-    const wardrobe0 = await erc6551registry.createAccount(await wardrobe.getAddress(), 1337, await delMundo.getAddress(), 0, 1, "0x")
-    const wallet0Address = await erc6551registry.account(await wallet.getAddress(), 1337, await delMundo.getAddress(), 0, 0)
-    const wardrobe0Address = await erc6551registry.account(await wardrobe.getAddress(), 1337, await delMundo.getAddress(), 0, 1)
+    const wallet0 = await erc6551registry.createAccount(await wallet.getAddress(), CHAINID, await delMundo.getAddress(), 0, 0, "0x")
+    const wardrobe0 = await erc6551registry.createAccount(await wardrobe.getAddress(), CHAINID, await delMundo.getAddress(), 0, 1, "0x")
+    const wallet0Address = await erc6551registry.account(await wallet.getAddress(), CHAINID, await delMundo.getAddress(), 0, 0)
+    const wardrobe0Address = await erc6551registry.account(await wardrobe.getAddress(), CHAINID, await delMundo.getAddress(), 0, 1)
 
     return {
         custodian,

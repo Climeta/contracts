@@ -2,6 +2,8 @@
 
 ## Summary
 
+
+
 ## Install
 
 Install the contract dependencies:
@@ -30,3 +32,27 @@ Then add in the remappings in foundry.toml
 * Errors
 * Modifiers
 * Functions
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant LoginPage
+    participant NFTWallet
+    User->>LoginPage: Navigate
+    LoginPage->>User: Login Button 
+    User->>NFTWallet: Connect Wallet
+    NFTWallet->>LoginPage: Fetch User's NFTs
+    LoginPage->>User: Choose NFT for Login
+    User->>NFTWallet: Selected NFT
+    NFTWallet->>LoginPage: Verify Ownership of NFT
+    LoginPage->>User: Login Successful
+```
+
+### Invariants
+
+ * Ray is the only one who gives out raywards
+ * total supply of DelMundos is never more than DelMundo.s_currentMaxSupply
+ * Ray (DelMundo tokenID 0) should always have enough reward tokens to distribute.
+ * No DelMundo can vote more than once per voting round
+ * Rayputation can only be earned, not traded
+ * 

@@ -4,17 +4,20 @@ var  chaiAsPromised = require("chai-as-promised")
 const expect = chai.expect
 chai.use(chaiAsPromised)
 
+const CHAINID = process.env.BLOCKCHAIN_ID
+const NOT_AUTH_CONTRACT = " function selector was not recognized and there's no fallback nor receive function"
+
 //TODO: Put some actual assertions in here - its all output only at the moment, requires review.
 
 async function deploy() {
     const [custodian, rayOwner, founder1, founder2, founder3, beneficiary1, beneficiary2, member1, member2, member3, member4, benefactor1, benefactor2, benefactor3 , treasury] = await ethers.getSigners()
 
     let RAYWARD = await ethers.getContractFactory("Rayward")
-    const rayward = await RAYWARD.deploy()
+    const rayward = await RAYWARD.deploy(await custodian.getAddress())
     await rayward.waitForDeployment();
 
-    let RAYDELMUNDO = await ethers.getContractFactory("RayDelMundo")
-    const rayNFT = await RAYDELMUNDO.deploy()
+    let RAYDELMUNDO = await ethers.getContractFactory("DelMundo")
+    const rayNFT = await RAYDELMUNDO.deploy(await custodian.getAddress())
     await rayNFT.waitForDeployment()
 
     console.log("Deploying Registry/Account contracts")
@@ -88,7 +91,7 @@ describe("Authorization Testing suite", function (accounts) {
         console.log("ensure we cannot donate to climatecore directly")
 
         console.log("Amount deposited to Auth contract : " + ethers.formatEther(await ethers.provider.getBalance(authContractAddress)))
-        await expect(member1.sendTransaction({to: climetaCoreAddress, value: ethers.parseEther("1.0"),  })).to.be.rejectedWith("Please donate via Authorization contract")
+        await expect(member1.sendTransaction({to: climetaCoreAddress, value: ethers.parseEther("1.0"),  })).to.be.rejectedWith(NOT_AUTH_CONTRACT)
 
     })
     

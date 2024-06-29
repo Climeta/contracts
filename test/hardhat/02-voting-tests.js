@@ -1,26 +1,31 @@
 const { ethers, upgrades } = require("hardhat")
 var chai = require("chai")
 var  chaiAsPromised = require("chai-as-promised")
-const { LazyMinter } = require( "../script/Voucher")
+const { LazyMinter } = require( "../../script/Voucher")
 const expect = chai.expect
 chai.use(chaiAsPromised)
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const {getAddress} = require("ethers");
+const BigNumber = require("bignumber.js");
 require('dotenv').config();
 
 const CHAINID = process.env.BLOCKCHAIN_ID
 const NOT_AN_ADMIN = "ClimetaCore__NotAdmin"
 const NOT_WALLET_OWNER = "ClimetaCore__NotRayWallet"
+const LAST_ADMIN = "ClimetaCore__CannotRemoveLastAdmin"
+const ALREADY_VOTED = "ClimetaCore__AlreadyVoted"
+const NOT_IN_ROUND = "ClimetaCore__ProposalNotInRound"
+const salt = ethers.encodeBytes32String("0")
 
 async function setup() {
   const [custodian, rayOwner, founder1, founder2, charity1, charity2, charity3, member1, member2, member3, member4, benefactor1, benefactor2, benefactor3 , treasury] = await ethers.getSigners()
 
   let RAYWARD = await ethers.getContractFactory("Rayward")
-  const rayward = await RAYWARD.deploy()
+  const rayward = await RAYWARD.deploy(await custodian.getAddress())
   await rayward.waitForDeployment();
 
   let RAYDELMUNDO = await ethers.getContractFactory("DelMundo")
-  const rayNFT = await RAYDELMUNDO.deploy()
+  const rayNFT = await RAYDELMUNDO.deploy(await custodian.getAddress())
   await rayNFT.waitForDeployment()
 
   console.log("Deploying Registry/Account contracts")
@@ -32,12 +37,12 @@ async function setup() {
   await erc6551account.waitForDeployment()
 
   console.log("Creating smart accounts for NFTs")
-  const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0, "0x")
-  const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0, "0x")
-  const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0, "0x")
-  const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0, "0x")
-  const account4 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 4, 0, "0x")
-  const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+  const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
+  const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 1)
+  const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 2)
+  const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 3)
+  const account4 = await erc6551registry.createAccount(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 4)
+  const account0address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
 
 
   console.log("Deploying climeta core")
@@ -72,7 +77,7 @@ async function setup() {
   console.log("Minting some Raywards and giving them to Ray and the founders")
   await rayward.mint(founder1, 1000)
   await rayward.mint(founder2, 1000)
-  await rayward.mint(await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0), 100000)
+  await rayward.mint(await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0), 1000000000000)
 
   const account0contract = await ethers.getContractAt("RayWallet", account0address, custodian)
 
@@ -80,7 +85,7 @@ async function setup() {
   console.log("Setting up allowances")
   ABI = ["function approve(address, uint256)"]
   iface = new ethers.Interface(ABI)
-  calldata = iface.encodeFunctionData("approve", [await climetaCore.getAddress(), 100000])
+  calldata = iface.encodeFunctionData("approve", [await climetaCore.getAddress(), 1000000000000])
   await account0contract.connect(rayOwner).executeCall(await rayward.getAddress(), 0, calldata)
 
   return {
@@ -117,7 +122,7 @@ describe("ClimetaCore Testing Suite", function (accounts) {
     const {rayNFT,rayward, climetaCore, authContract, erc6551registry, erc6551account, benefactor1, benefactor2, custodian, member1, member2, member3, member4, rayOwner, charity1, charity2, charity3, founder1, treasury} = await setup()
     provider = hre.ethers.provider
 
-    const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+    const account0address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(),0)
     const account0contract = await ethers.getContractAt("RayWallet", account0address, custodian)
 
     console.log("Setting up allowances for an account to move raywards")
@@ -145,9 +150,10 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
     await climetaCore.connect(member1).revokeAdmin(await founder1.getAddress())
     await expect(climetaCore.connect(founder1).addAdmin(await member2.getAddress())).to.be.rejectedWith(NOT_AN_ADMIN)
-    await expect(climetaCore.connect(member1).revokeAdmin(await member1.getAddress())).to.be.rejectedWith("Can't revoke yourself")
+
     await climetaCore.revokeAdmin(await member1.getAddress())
     await expect(climetaCore.connect(member1).addBeneficiary(await charity1.getAddress(), "Charity1", "")).to.be.rejectedWith(NOT_AN_ADMIN)
+    await expect(climetaCore.revokeAdmin(await custodian.getAddress())).to.be.rejectedWith(LAST_ADMIN)
   })
 
   it("Charity loading testing", async function () {
@@ -222,7 +228,6 @@ describe("ClimetaCore Testing Suite", function (accounts) {
     const authContractAddress = await authContract.getAddress()
     await benefactor1.sendTransaction({to: authContractAddress, value: ethers.parseEther("100.0"),})
     await authContract.connect(custodian).approveDonation(await benefactor1.getAddress(), ethers.parseEther("100.0"))
-    // TODO Is the total donated by the brand the amount after the 10% :)
     expect (await climetaCore.getTotalDonationsByAddress(await benefactor1.getAddress())).to.equal(ethers.parseEther("90.0"))
 
 
@@ -264,16 +269,16 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
 
     // get Rays own wallet address
-    const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+    const account0address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 0)
 
     // Get smart wallets for members 1-3
-    const account1address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0)
+    const account1address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 1)
     const account1contract = await ethers.getContractAt("RayWallet", account1address, custodian)
-    const account2address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0)
+    const account2address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 2)
     const account2contract = await ethers.getContractAt("RayWallet", account2address, custodian)
-    const account3address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0)
+    const account3address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 3)
     const account3contract = await ethers.getContractAt("RayWallet", account3address, custodian)
-    const account4address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 4, 0)
+    const account4address = await erc6551registry.account(await erc6551account.getAddress(), salt, CHAINID, await rayNFT.getAddress(), 4)
     const account4contract = await ethers.getContractAt("RayWallet", account4address, custodian)
 
     console.log("Voting as a Ray wallet section")
@@ -305,24 +310,24 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
     console.log("Testing can't vote and a non delmundo")
 // Test to see if Raywards have been given out.
-    expect (await rayward.balanceOf(account1address)).to.equal(100)
-    expect (await rayward.balanceOf(account2address)).to.equal(100)
-    expect (await rayward.balanceOf(account3address)).to.equal(100)
+    expect (await rayward.balanceOf(account1address)).to.equal(100000000000)
+    expect (await rayward.balanceOf(account2address)).to.equal(100000000000)
+    expect (await rayward.balanceOf(account3address)).to.equal(100000000000)
 
     // Member3 votes with second DelMundo
     expect (await rayward.balanceOf(account4address)).to.equal(0)
     await account4contract.connect(member3).executeCall(await climetaCore.getAddress(), 0, voteFor2)
-    expect (await rayward.balanceOf(account4address)).to.equal(100)
+    expect (await rayward.balanceOf(account4address)).to.equal(100000000000)
 
     // Ensure member1 cannot vote twice nor on same proposal
-    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor1)).to.be.rejectedWith("This RayDelMundo has already voted")
-    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor2)).to.be.rejectedWith("This RayDelMundo has already voted")
-    await expect(account3contract.connect(member3).executeCall(await climetaCore.getAddress(), 0, voteFor2)).to.be.rejectedWith("This RayDelMundo has already voted")
+    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor1)).to.be.rejectedWith(ALREADY_VOTED)
+    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor2)).to.be.rejectedWith(ALREADY_VOTED)
+    await expect(account3contract.connect(member3).executeCall(await climetaCore.getAddress(), 0, voteFor2)).to.be.rejectedWith(ALREADY_VOTED)
     await expect(account1contract.connect(member3).executeCall(await climetaCore.getAddress(), 0, voteFor2)).to.be.rejectedWith("Not token owner")
 
     // Ensure we can't vote on a proposal not in the voting round
-    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor0)).to.be.rejectedWith("Can't vote on a proposal not in this round")
-    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor10)).to.be.rejectedWith("Can't vote on a proposal not in this round")
+    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor0)).to.be.rejectedWith(NOT_IN_ROUND)
+    await expect(account1contract.connect(member1).executeCall(await climetaCore.getAddress(), 0, voteFor10)).to.be.rejectedWith(NOT_IN_ROUND)
 
 
     console.log("Ensure cannot vote directly")
@@ -345,10 +350,30 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
     await climetaCore.endVotingRound()
 
-    // Test to make sure all fund has been dispatched.
-    expect ((await provider.getBalance(await charity1.getAddress())).toString()).to.equal("10023250000000000000000")
-    expect ((await provider.getBalance(await charity2.getAddress())).toString()).to.equal("10063750000000000000000")
-    expect ((await provider.getBalance(await charity3.getAddress())).toString()).to.equal("10003000000000000000000")
+    expect ((await provider.getBalance(await charity1.getAddress())).toString()).to.equal("10000000000000000000000")
+    expect ((await provider.getBalance(await charity2.getAddress())).toString()).to.equal("10000000000000000000000")
+    expect ((await provider.getBalance(await charity3.getAddress())).toString()).to.equal("10000000000000000000000")
+
+    // Charities now withdraw their funds
+    // Need to work out the gas cost as well to do the test checks
+
+    let transactionResponse = await climetaCore.connect(charity1).withdraw()
+    let receipt = await transactionResponse.wait()
+    let gasPrice = transactionResponse.gasPrice
+    let cost = gasPrice * receipt.gasUsed
+    expect ((await provider.getBalance(await charity1.getAddress()) + cost).toString()).to.equal("10023250000000000000000")
+
+    transactionResponse = await climetaCore.connect(charity2).withdraw()
+    receipt = await transactionResponse.wait()
+    gasPrice = transactionResponse.gasPrice
+    cost = gasPrice * receipt.gasUsed
+    expect ((await provider.getBalance(await charity2.getAddress()) + cost).toString()).to.equal("10063750000000000000000")
+
+    transactionResponse = await climetaCore.connect(charity3).withdraw()
+    receipt = await transactionResponse.wait()
+    gasPrice = transactionResponse.gasPrice
+    cost = gasPrice * receipt.gasUsed
+    expect ((await provider.getBalance(await charity3.getAddress()) + cost).toString()).to.equal("10003000000000000000000")
 
     // Test to make sure all fund has been dispatched
     expect(await provider.getBalance(await climetaCore.getAddress())).to.equal(0)
@@ -372,7 +397,7 @@ describe("ClimetaCore Testing Suite", function (accounts) {
     await authContract.connect(custodian).approveDonation(await benefactor1.getAddress(), ethers.parseEther("26.0"))
 
     // Test no votes simply exits with error message
-    await expect(climetaCore.endVotingRound()).to.be.eventually.be.rejectedWith("No votes on this round, need to extend voting period")
+    await expect(climetaCore.endVotingRound()).to.be.eventually.be.rejectedWith("ClimetaCore__NoVotes")
 
     // Vote
     voteFor6 = iface.encodeFunctionData("castVote", [6])
@@ -387,9 +412,14 @@ describe("ClimetaCore Testing Suite", function (accounts) {
 
     console.log("Charity 1 before round 2 : " + ethers.formatEther(await provider.getBalance(await charity1.getAddress()) ))
     console.log("Charity 3 before round 2 : " + ethers.formatEther(await provider.getBalance(await charity3.getAddress()) ))
+    let charity1balance = await provider.getBalance(await charity1.getAddress())
+
     await climetaCore.endVotingRound()
-    console.log("Charity 1 after round 2 : " + ethers.formatEther(await provider.getBalance(await charity1.getAddress()) ))
-    console.log("Charity 3 after round 2 : " + ethers.formatEther(await provider.getBalance(await charity3.getAddress()) ))
+
+    // Test the push of funds to the charities
+    await climetaCore.connect(custodian).pushPayment(await charity1.getAddress())
+    expect ((await provider.getBalance(await charity1.getAddress())) > charity1balance).to.be.true
+    // TODO need to check the gas cost of the transaction and be more thorough.
 
   });
 

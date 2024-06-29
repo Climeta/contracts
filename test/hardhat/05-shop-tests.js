@@ -2,10 +2,11 @@ const { ethers, upgrades } = require("hardhat")
 var chai = require("chai")
 var  chaiAsPromised = require("chai-as-promised")
 const expect = chai.expect
-const { LazyMinter } = require( "../nft/nft-generator/lib/LazyMinter")
+const { LazyMinter } = require( "../../script/Voucher")
 const {toNumber} = require("ethers");
 chai.use(chaiAsPromised)
 
+const CHAINID = process.env.BLOCKCHAIN_ID
 
 async function deploy() {
     const [custodian, member1, member2] = await ethers.getSigners()
@@ -14,7 +15,7 @@ async function deploy() {
     const rayward = await RAYWARD.deploy()
     await rayward.waitForDeployment();
 
-    let RAYDELMUNDO = await ethers.getContractFactory("RayDelMundo")
+    let RAYDELMUNDO = await ethers.getContractFactory("DelMundo")
     const rayNFT = await RAYDELMUNDO.deploy()
     await rayNFT.waitForDeployment()
 
@@ -29,11 +30,11 @@ async function deploy() {
     const erc6551account = await Account.deploy()
     await erc6551account.waitForDeployment()
 
-    const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 0, 0, "0x")
-    const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 1, 0, "0x")
-    const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 2, 0, "0x")
-    const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 3, 0, "0x")
-    const account0address = await erc6551registry.account(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 0, 0)
+    const account0 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0, "0x")
+    const account1 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0, "0x")
+    const account2 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0, "0x")
+    const account3 = await erc6551registry.createAccount(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0, "0x")
+    const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
 
     let shopFactory = await ethers.getContractFactory("ShopLedger")
     const shopContract = await upgrades.deployProxy(shopFactory, [await rayward.getAddress(), account0address])
@@ -71,10 +72,10 @@ describe("Token Testing suite", function (accounts) {
         await rayNFT.connect(member2).redeem(voucher2, {value: ethers.parseEther("0.1")})
         await rayNFT.connect(member1).redeem(voucher3, {value: ethers.parseEther("0.1")})
 
-        const account0address = await erc6551registry.account(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 0, 0)
-        const account1address = await erc6551registry.account(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 1, 0)
-        const account2address = await erc6551registry.account(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 2, 0)
-        const account3address = await erc6551registry.account(await erc6551account.getAddress(), 1337, await rayNFT.getAddress(), 3, 0)
+        const account0address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 0, 0)
+        const account1address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 1, 0)
+        const account2address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 2, 0)
+        const account3address = await erc6551registry.account(await erc6551account.getAddress(), CHAINID, await rayNFT.getAddress(), 3, 0)
 
         const account1contract = await ethers.getContractAt("RayWallet", account1address, custodian)
         const account2contract = await ethers.getContractAt("RayWallet", account2address, custodian)
