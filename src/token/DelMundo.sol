@@ -36,6 +36,10 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     bytes32 public constant RAY_ROLE = keccak256("RAY_ROLE");
     string public constant SIGNING_DOMAIN = "RayNFT-Voucher";
     string public constant SIGNATURE_VERSION = "1";
+    bytes32 private constant TRACTOR_HASHED_NAME = keccak256(bytes("Tractor"));
+    bytes32 private constant TRACTOR_HASHED_VERSION = keccak256(bytes("1"));
+    bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 constant VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
     bytes4 constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
 
     uint256 public s_maxPerWalletAmount = 5;
@@ -108,13 +112,21 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher An NFTVoucher to hash.
     function _hash(NFTVoucher calldata voucher) internal view returns (bytes32) {
+        bytes32 structHash = _voucherHash(voucher);
+        return keccak256(abi.encodePacked("\x19\x01", _domainSeparatorV4(), structHash));
+    }
+
+    /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher An NFTVoucher to hash.
+    function _voucherHash(NFTVoucher calldata voucher) internal view returns (bytes32) {
         return _hashTypedDataV4(keccak256(abi.encode(
-            keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)"),
+            VOUCHER_TYPEHASH,
             voucher.tokenId,
             keccak256(bytes(voucher.uri)),
             voucher.minPrice
         )));
     }
+
     /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher An NFTVoucher describing an unminted NFT.
@@ -158,22 +170,6 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
         if (totalOwned >= s_maxPerWalletAmount) {
             revert DelMundo__TooMany();
         }
-
-//        if (voucher.tokenId == 2) {
-//            _mint(signer, 10001);
-//            _mint(signer, 10002);
-//            _mint(signer, 10003);
-//            _mint(signer, 10004);
-//            _mint(signer, 10005);
-//            _mint(signer, 10006);
-//            _mint(signer, 10007);
-//            _mint(signer, 10008);
-//            _mint(signer, 10009);
-//            _mint(signer, 10010);
-//            _mint(signer, 10011);
-//            _mint(signer, 10012);
-//
-//        }
 
         s_isTokenMinted[voucher.tokenId] = true;
         // first assign the token to the signer, to establish provenance on-chain
