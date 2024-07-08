@@ -21,7 +21,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     string constant tokenUriToTest = "https://token.uri/";
     string constant tokenUriToTest2 = "https://token.uri2/";
     uint256 constant MAX_SUPPLY = 1000;
-    uint256 constant MAX_PER_WALLET = 20;
+    uint256 constant MAX_PER_WALLET = 5;
     address private admin;
     uint256 private adminPk;
 
@@ -29,6 +29,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     string private constant SIGNATURE_VERSION = "1";
     uint256 private constant MIN_PRICE = 100000000000;
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 constant VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
 
     struct VoucherData {
         uint256 tokenId;
@@ -55,8 +56,8 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_publicVariables() public view {
-        assertEq(delMundo.s_maxPerWalletAmount(), 20);
-        assertEq(delMundo.s_currentMaxSupply(), 1000);
+        assertEq(delMundo.s_maxPerWalletAmount(), MAX_PER_WALLET);
+        assertEq(delMundo.s_currentMaxSupply(), MAX_SUPPLY);
         assertFalse(delMundo.s_isTokenMinted(0));
     }
 
@@ -96,8 +97,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
             block.chainid,
             address(delMundo)
         ));
-
-        bytes32 VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));

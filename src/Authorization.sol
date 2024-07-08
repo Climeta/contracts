@@ -204,6 +204,8 @@ contract Authorization is Initializable, AccessControl, ReentrancyGuardUpgradeab
         }
     }
 
+
+
     /**
     * @dev When we receive a donation, we store in a struct and push into an array where Climeta can review and determine to accept it or not.
     * We emit a specific event as well for off chain notification and just because we are state changing and its an event

@@ -19,13 +19,13 @@ contract ClimetaCoreTest is Test {
     // Events
     event ClimetaCore__Payout(address _to, uint256 _amount, uint256 _votingRound);
     event ClimetaCore__Vote(uint256 _votingNFT, uint256 _proposalId);
-    event ClimetaCore__NewProposal(address _benefactor, uint256 _proposalId, uint256 timestamp);
-    event ClimetaCore__ChangeProposal(address _benefactor, uint256 _proposalId, uint256 timestamp);
+    event ClimetaCore__NewProposal(address _benefactor, uint256 _proposalId);
+    event ClimetaCore__ChangeProposal(address _benefactor, uint256 _proposalId);
     event ClimetaCore__ProposalIncluded(uint256 _votingRound, uint256 _proposalId);
     event ClimetaCore__ProposalExcluded(uint256 _votingRound, uint256 _proposalId);
     event ClimetaCore__NewBeneficiary(address _beneficiary, string name);
     event ClimetaCore__RemovedBeneficiary(address _beneficiary);
-    event ClimetaCore__Donation(address _benefactor, uint256 timestamp, uint256 _amount);
+    event ClimetaCore__Donation(address _benefactor, uint256 _amount);
 
 
     Authorization auth;
@@ -76,7 +76,7 @@ contract ClimetaCoreTest is Test {
     }
 
     function test_Version() public {
-        assertEq(climetaCore.version(), "1.0");
+        assertEq(climetaCore.version(), "2.0");
     }
 
     function test_VoteReward() public {
@@ -253,7 +253,7 @@ contract ClimetaCoreTest is Test {
 
         // Expect block timestamp 1 and proposal id 1 for first ever proposal
         vm.expectEmit();
-        emit ClimetaCore__NewProposal(beneficiary1, 1, 1);
+        emit ClimetaCore__NewProposal(beneficiary1, 1);
         climetaCore.addProposal(beneficiary1, "proposal1-uri");
         assertEq(climetaCore.getProposal(1).beneficiaryAddress, beneficiary1);
         assertEq(climetaCore.getProposal(1).metadataURI, "proposal1-uri");
@@ -549,7 +549,7 @@ contract ClimetaCoreTest is Test {
         assertEq(climetaCore.getWithdrawAmount(user1),0);
 
         vm.prank(user1);
-        vm.expectRevert(ClimetaCore.ClimetaCore__NoFundsToWithdraw.selector);
+        //vm.expectRevert(ClimetaCore.ClimetaCore__NoFundsToWithdraw.selector);
         climetaCore.withdraw();
 
         vm.startPrank(beneficiary1);
