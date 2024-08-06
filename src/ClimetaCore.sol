@@ -2,6 +2,7 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "./token/DelMundo.sol";
 import "./token/Rayward.sol";
 import "./RayWallet.sol";
@@ -22,6 +23,12 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     /// @param _amount The amount of the payout
     event ClimetaCore__Payout(address _to, uint256 _amount);
 
+    /// @notice Emitted when an ERC20 payout is made
+    /// @param _to The address receiving the payout
+    /// @param _token The address of the ERC20 being paid out
+    /// @param _amount The amount of the payout
+    event ClimetaCore__ERC20Payout(address _to, address _token, uint256 _amount);
+
     /// @notice Emitted when a vote is cast
     /// @param _votingNFT The NFT used to vote
     /// @param _proposalId The ID of the proposal being voted on
@@ -30,14 +37,12 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     /// @notice Emitted when a new proposal is added
     /// @param _benefactor The address of the benefactor
     /// @param _proposalId The ID of the new proposal
-    /// @param timestamp The time when the proposal was added
-    event ClimetaCore__NewProposal(address _benefactor, uint256 _proposalId, uint256 timestamp);
+    event ClimetaCore__NewProposal(address _benefactor, uint256 _proposalId);
 
     /// @notice Emitted when a proposal is changed
     /// @param _benefactor The address of the benefactor
     /// @param _proposalId The ID of the proposal being changed
-    /// @param timestamp The time when the proposal was changed
-    event ClimetaCore__ChangeProposal(address _benefactor, uint256 _proposalId, uint256 timestamp);
+    event ClimetaCore__ChangeProposal(address _benefactor, uint256 _proposalId);
 
     /// @notice Emitted when a proposal is included in a voting round
     /// @param _votingRound The voting round in which the proposal was included
@@ -60,9 +65,22 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
 
     /// @notice Emitted when a donation is made
     /// @param _benefactor The address of the benefactor making the donation
-    /// @param timestamp The time when the donation was made
     /// @param _amount The amount of the donation
-    event ClimetaCore__Donation(address _benefactor, uint256 timestamp, uint256 _amount);
+    event ClimetaCore__Donation(address _benefactor, uint256 _amount);
+
+    /// @notice Emitted when an ERC20 donation is made
+    /// @param _benefactor The address of the benefactor making the donation
+    /// @param _token The ERC20 token donated
+    /// @param _amount The amount of the donation
+    event ClimetaCore__ERC20Donation(address _benefactor, address _token, uint256 _amount);
+
+    /// @notice Emitted when a token is approved for use as treasury token
+    /// @param _token The address of the ERC20 token added
+    event ClimetaCore__TokenApproved(address _token);
+
+    /// @notice Emitted when a token is revoked for use as treasury token
+    /// @param _token The address of the ERC20 token removed
+    event ClimetaCore__TokenRevoked(address _token);
 
     // Errors
     error ClimetaCore__CannotRemoveLastAdmin();
@@ -78,6 +96,8 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     error ClimetaCore__NotFromAuthContract();
     error ClimetaCore__NoFundsToWithdraw();
     error ClimetaCore__ProposalHasVotes();
+    error ClimetaCore__ValueStillInContract();
+    error ClimetaCore__NotValueToken();
 
     // Structures
     struct Proposal {
@@ -114,11 +134,15 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     uint256 public s_totalDonatedAmount;
     mapping(address => uint256) public s_donations;
 
+    mapping(address => uint256) public s_erc20DonatedTotals;
+    mapping(address => mapping(address => uint256)) public s_erc20Donations;
+
     mapping(uint256 => Proposal) private s_proposals;
     uint256[] public s_proposalList;
 
     // Mapping to hold the amounts the beneficiaries can withdraw.
     mapping(address => uint256) s_withdrawls;
+    mapping(address => mapping(address => uint256))  s_erc20Withdrawls;
 
     // Mapping to hold the beneficiary address and the data -
     // TODO do we map charity by an id or by an address?
@@ -136,8 +160,16 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     // mapping to show proposal and the membership voting array
     mapping(uint256 => uint256[]) s_votes;
 
+    // List of allowed ERC20 treasury tokens
+    IERC20[] public s_allowedTokens;
+    mapping(IERC20 => bool) public s_isAllowedToken;
+
+    // Climeta Ops treasury
+    address private s_opsTreasury;
+
     // gap param for storage blocking
     uint256[49] __gap;
+
 
     /// @notice Modifier to ensure only admins can call a function
     modifier onlyAdmin () {
@@ -175,13 +207,59 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     /// @return The version of the contract
     /// @dev This function will change when the implementation changes
     function version() external pure returns (string memory) {
-        return "1.0";
+        return "2.0";
     }
 
     /// @notice Sets the amount of raywards given for voting. Can only be called by Admins
     /// @param _reward The new reward amount
     function setVoteReward(uint256 _reward) public onlyAdmin {
         s_voteReward = _reward;
+    }
+
+    /**
+    * @dev Update the ops address. Should be rarely called, if ever, but need the capability to do so. Covered by the onlyAdmin modifier
+    * to ensure only admins can do this, given this is a 10% diversion of funds.
+    * @param _ops The address of the new ops treasury.
+    */
+    function updateOpsAddress(address payable _ops) public onlyAdmin {
+        s_opsTreasury = _ops;
+    }
+
+    /// @notice Checks the ERC20 against list of allowed tokens
+    /// @param _token The token to check
+    function isAllowedToken(IERC20 _token) public view returns(bool) {
+        return s_isAllowedToken[_token];
+    }
+
+    /// @notice Adds an ERC20 to the list of allowed tokens
+    /// @param _token The allowed token to add
+    function addAllowedToken(IERC20 _token) public onlyAdmin {
+        s_allowedTokens.push() = _token;
+        s_isAllowedToken[_token] = true;
+        emit ClimetaCore__TokenApproved(address(_token));
+    }
+
+    /// @notice Removes an ERC20 from the list of allowed tokens
+    /// Cannot remove if there is still value left in the treasury.
+    /// @param _token The allowed token to add
+    function removeAllowedToken(IERC20 _token) public onlyAdmin {
+        if (_token.balanceOf(address(this)) > 0) {
+            revert ClimetaCore__ValueStillInContract();
+        }
+
+        uint256 numberOfTokens = s_allowedTokens.length;
+        // remove from array of proposals for this voting round
+        for (uint256 i=0; i < numberOfTokens;i++) {
+            if (s_allowedTokens[i] == _token) {
+                for (uint256 j=i; j + 1 < numberOfTokens ; j++ ) {
+                    s_allowedTokens[j] = s_allowedTokens[j+1];
+                }
+                s_allowedTokens.pop();
+                s_isAllowedToken[_token] = false;
+                emit ClimetaCore__TokenRevoked(address(_token));
+                return;
+            }
+        }
     }
 
     /// @notice Returns the multiplier for a voter
@@ -275,7 +353,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
         uint256 m_proposalId = s_proposalId;
         s_proposals[m_proposalId] = Proposal(m_proposalId, _beneficiary, _proposalURI, 0);
         s_proposalList.push(m_proposalId);
-        emit ClimetaCore__NewProposal(_beneficiary, m_proposalId, block.timestamp);
+        emit ClimetaCore__NewProposal(_beneficiary, m_proposalId);
         s_proposalId++;
     }
 
@@ -423,7 +501,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     }
 
     /**
-    * @dev The ending of a voting round is a manual action perfomed by Climeta Admins. This may change moving forwards to be more autonomous.
+    * @dev The ending of a voting round is a manual action performed by Climeta Admins. This may change moving forwards to be more autonomous.
     *
     * The fund is currently split into 2 pieces. The EVERYONE_PERCENTAGE ensures that ALL beneficiaries receive an even split of this percentage.
     * This is currently set to 10% at time of writing. The remaining 90% is then split based on the number of votes each proposal received.
@@ -454,34 +532,58 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
             revert ClimetaCore__NoVotes();
         }
 
-        uint256 fundBalance = address(this).balance;
+        uint256 fundEthBalance = address(this).balance;
         // work out amount to send out to all according to EVERYONE_PERCENTAGE
-        uint256 toAll = (fundBalance * EVERYONE_PERCENTAGE) / (propIdsLength*100);
+        uint256 ethToAll = (fundEthBalance * EVERYONE_PERCENTAGE) / (propIdsLength*100);
+
+        uint256 approvedErc20Length = s_allowedTokens.length;
+        // Create an array of the amounts to go to each for each ERC20
+        uint256[] memory erc20ToAll;
+        for (uint256 i = 0; i < approvedErc20Length; i++) {
+            erc20ToAll[i] = (s_allowedTokens[i].balanceOf(address(this)) * EVERYONE_PERCENTAGE) / (propIdsLength*100);
+        }
 
         // amount paid out is % of fund to each beneficiary
         // Total = amount everyone gets + remainder according to what % of the total vote this proposal received
         for (uint256 i = 0; i < propIdsLength; i++) {
-            uint256 amount;
-            unchecked {amount = (fundBalance * (100-EVERYONE_PERCENTAGE) * s_votes[propIds[i]].length/totalVotes)/100 + toAll;}
+            uint256 ethAmount;
+            unchecked {ethAmount = (fundEthBalance * (100-EVERYONE_PERCENTAGE) * s_votes[propIds[i]].length/totalVotes)/100 + ethToAll;}
             // Add to amount in case beneficiary has not withdrawn from previous rounds.
-            s_withdrawls[s_proposals[propIds[i]].beneficiaryAddress] += amount;
+            s_withdrawls[s_proposals[propIds[i]].beneficiaryAddress] += ethAmount;
+
+            for (uint256 j = 0; j < approvedErc20Length; j++) {
+                uint256 erc20Amount;
+                unchecked {erc20Amount = (s_allowedTokens[j].balanceOf(address(this)) * (100-EVERYONE_PERCENTAGE) * s_votes[propIds[i]].length/totalVotes)/100 + erc20ToAll[j];}
+                s_erc20Withdrawls[s_proposals[propIds[i]].beneficiaryAddress][address(s_allowedTokens[j])] += erc20Amount;
+            }
         }
         s_votingRound++;
     }
 
     /**
-    * @dev Allows beneficaries to claim their funds
+    * @dev Allows beneficiaries to claim their funds
     * This only allows the owner of the beneficiary address to withdraw the funds.
     *
     */
     function withdraw() external {
-        uint256 amount = s_withdrawls[msg.sender];
-        if (amount == 0) {
-            revert ClimetaCore__NoFundsToWithdraw();
+        //ERC20 withdrawls
+        uint256 approvedErc20Length = s_allowedTokens.length;
+        for (uint256 i=0; i < approvedErc20Length; i++ ) {
+            uint256 amount = s_erc20Withdrawls[msg.sender][address(s_allowedTokens[i])];
+            if (amount > 0) {
+                s_erc20Withdrawls[msg.sender][address(s_allowedTokens[i])] = 0;
+                emit ClimetaCore__ERC20Payout(msg.sender, address(s_allowedTokens[i]), amount);
+                s_allowedTokens[i].transfer(msg.sender, amount);
+            }
         }
-        s_withdrawls[msg.sender] = 0;
-        emit ClimetaCore__Payout(msg.sender, amount);
-        payable(msg.sender).call{value: amount}("");
+
+        // ETH withdrawls
+        uint256 amountETH = s_withdrawls[msg.sender];
+        if (amountETH > 0) {
+            s_withdrawls[msg.sender] = 0;
+            emit ClimetaCore__Payout(msg.sender, amountETH);
+            payable(msg.sender).call{value: amountETH}("");
+        }
     }
 
     /**
@@ -537,7 +639,22 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
         }
         s_totalDonatedAmount += msg.value;
         s_donations[_benefactor] += msg.value;
-        emit ClimetaCore__Donation(_benefactor, block.timestamp, msg.value);
+        emit ClimetaCore__Donation(_benefactor, msg.value);
+    }
+
+    // @dev Pull some tokens from donator. They must have been pre-approved.
+    function donateToken(IERC20 token, uint256 amount) external {
+        // check if token is allowed
+        if (!isAllowedToken(token)) {
+            revert ClimetaCore__NotValueToken();
+        }
+        s_erc20Donations[msg.sender][address(token)] += amount;
+        s_erc20DonatedTotals[address(token)] += amount;
+        emit ClimetaCore__ERC20Donation(msg.sender, address(token), amount);
+        token.transferFrom(msg.sender, address(this), amount);
+
+        uint256 opsAmount = (amount * 10) / 100;
+        token.transfer(s_opsTreasury, opsAmount);
     }
 
 
