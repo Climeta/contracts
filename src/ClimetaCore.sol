@@ -164,6 +164,9 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     IERC20[] public s_allowedTokens;
     mapping(IERC20 => bool) public s_isAllowedToken;
 
+    // Climeta Ops treasury
+    address private s_opsTreasury;
+
     // gap param for storage blocking
     uint256[49] __gap;
 
@@ -211,6 +214,15 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     /// @param _reward The new reward amount
     function setVoteReward(uint256 _reward) public onlyAdmin {
         s_voteReward = _reward;
+    }
+
+    /**
+    * @dev Update the ops address. Should be rarely called, if ever, but need the capability to do so. Covered by the onlyAdmin modifier
+    * to ensure only admins can do this, given this is a 10% diversion of funds.
+    * @param _ops The address of the new ops treasury.
+    */
+    function updateOpsAddress(address payable _ops) public onlyAdmin {
+        s_opsTreasury = _ops;
     }
 
     /// @notice Checks the ERC20 against list of allowed tokens
@@ -638,9 +650,11 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
         }
         s_erc20Donations[msg.sender][address(token)] += amount;
         s_erc20DonatedTotals[address(token)] += amount;
-
-        token.transferFrom(msg.sender, address(this), amount);
         emit ClimetaCore__ERC20Donation(msg.sender, address(token), amount);
+        token.transferFrom(msg.sender, address(this), amount);
+
+        uint256 opsAmount = (amount * 10) / 100;
+        token.transfer(s_opsTreasury, opsAmount);
     }
 
 
