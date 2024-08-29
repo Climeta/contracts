@@ -9,19 +9,20 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 /**
  * @title Membership NFT for Climeta
  * @author matt@climeta.io
  * @notice The DelMundo is an ERC721 NFT.
  * The metadata and images are stored on IPFS.
- * The metadata uris for each Del Mundo are completely distinct, there is no IPFs folder naming convention.
- * This is done because the images are premade and preloaded to IPFS and to preserve the anonymity of the next DelMundo till mint time
- * the uri for the metadata should not be guessable.
- * it uses some extensions so minting can be paused
+ * The metadata uris for each Del Mundo are completely distinct, there is no IPFS folder naming convention.
+ * This is done because the images are pre-made and pre-loaded to IPFS and to preserve the anonymity of the next DelMundo
+ * till mint time, the uri for the metadata should not be guessable.
+ * We uses some extensions so minting can be paused
  * @dev bugbounty contact mysaviour@climeta.io
  */
-contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl {
+contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl, ERC2981 {
     event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
 
     error DelMundo__NotRay(address caller);
@@ -138,7 +139,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
      *
      * @param voucher NFTVoucher struct containing tokenId, ipfs metadatauri, price and the typed data signature.
      */
-    function redeem(NFTVoucher calldata voucher) external payable returns (uint256) {
+    function redeem(NFTVoucher calldata voucher) external payable  returns (uint256) {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         // make sure that the signer is authorized to mint NFTs
@@ -178,7 +179,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     }
 
     function safeMint(address to, uint256 tokenId, string memory uri)
-    external whenNotPaused onlyRay
+    external onlyRay
     {
         if (s_isTokenMinted[tokenId]) {
             revert DelMundo__AlreadyMinted();
@@ -206,7 +207,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
         super._increaseBalance(account, value);
     }
 
-    // @dev this overide prevents DelMundos from being moved to the ERC6551 locker wallet of another DelMundo.
+    // @dev this override prevents DelMundos from being moved to the ERC6551 locker wallet of another DelMundo.
     function _update (address to, uint256 tokenId, address auth) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) returns(address) {
         bool isDelMundoWallet = ERC165Checker.supportsInterface(to, I_AM_DELMUNDO_WALLET);
         if (isDelMundoWallet) {
@@ -218,7 +219,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC721, ERC721Enumerable, AccessControl, ERC721URIStorage)
+    override(ERC721, ERC721Enumerable, AccessControl, ERC721URIStorage, ERC2981)
     returns (bool)
     {
         return super.supportsInterface(interfaceId);

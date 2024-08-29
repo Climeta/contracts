@@ -61,7 +61,9 @@ contract ClimetaCoreTest is Test {
 
         DeployClimetaCore climetaCoreDeployer = new DeployClimetaCore();
         climetaCore = ClimetaCore(payable(climetaCoreDeployer.run(admin, address(delMundo), address(rayward), address(registry), raysWallet)));
+        vm.startPrank(admin);
         climetaCore.updateOpsAddress(ops);
+        vm.stopPrank();
 
         DeployAuthorization authorizationDeployer = new DeployAuthorization();
         auth = Authorization(payable(authorizationDeployer.run(admin, ops, payable(address(climetaCore)))));

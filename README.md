@@ -56,3 +56,12 @@ sequenceDiagram
  * No DelMundo can vote more than once per voting round
  * Rayputation can only be earned, not traded
  * 
+
+
+## Deployments
+
+To deploy the contracts, run the following command:
+
+```bash
+forge deploy
+```
