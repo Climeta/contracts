@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY:
+.PHONY: help
 
 
 generate-abi: cast
