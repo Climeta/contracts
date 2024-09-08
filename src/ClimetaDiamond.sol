@@ -10,10 +10,13 @@ pragma solidity 0.8.25;
 
 import { LibDiamond } from "./lib/LibDiamond.sol";
 import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
+import {ClimetaStorage} from "./storage/ClimetaStorage.sol";
+import "./interfaces/IDiamondLoupe.sol";
 
 contract ClimetaDiamond {
+    ClimetaStorage s;
 
-    constructor(address _contractOwner, address _diamondCutFacet) payable {
+    constructor(address _contractOwner, address _diamondCutFacet, address _delMundo, address _rayWallet, address _rayward, address _rayputation, address _opsTreasury, address _registry) {
         LibDiamond.setContractOwner(_contractOwner);
 
         // Add the diamondCut external function from the diamondCutFacet
@@ -26,6 +29,15 @@ contract ClimetaDiamond {
             functionSelectors: functionSelectors
         });
         LibDiamond.diamondCut(cut, address(0), "");
+
+        // Set up all the relevant addresses for Climeta.
+        s.climetaAddress = address(this);
+        s.delMundoAddress = _delMundo;
+        s.opsTreasuryAddress = _opsTreasury;
+        s.rayputationAddress = _rayputation;
+        s.rayWalletAddress = _rayWallet;
+        s.raywardAddress = _rayward;
+        s.registryAddress = _registry;
     }
 
     // Find facet for function that is called and execute the

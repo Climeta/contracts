@@ -9,6 +9,7 @@ contract DeployDelMundo is Script {
 
     function run(address admin) external returns (address) {
         DelMundo delMundo = new DelMundo(admin);
+        delMundo = DelMundo(address(delMundo));
         return (address(delMundo));
     }
 }

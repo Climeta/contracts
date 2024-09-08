@@ -53,6 +53,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.addAdmin(current);
 
         treasury = payable(makeAddr("treasury"));
+        vm.prank(admin);
+        delMundo.setDefaultRoyalites(treasury, 1000);
+
     }
 
     function test_publicVariables() public view {
@@ -170,6 +173,13 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         address userB = makeAddr("userB");
         delMundo.transferFrom(address(this), userB, 1);
         assertEq(delMundo.ownerOf(1), userB);
+    }
+
+    function test_getRoyalty() public {
+        delMundo.safeMint(address(this), 1, tokenUriToTest);
+        (address receiver, uint256 royalty) = delMundo.royaltyInfo(1, 10_000);
+        assertEq(receiver, treasury);
+        assertEq(royalty, 1_000);
     }
 
     function test_transferToRayWallet() public {

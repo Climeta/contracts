@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import {ERC721Enumerable, ERC721} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
+import {ERC721Pausable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 
 /**
  * @title Membership NFT for Climeta
@@ -22,7 +21,7 @@ import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
  * We uses some extensions so minting can be paused
  * @dev bugbounty contact mysaviour@climeta.io
  */
-contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl, ERC2981 {
+contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl, ERC721Royalty {
     event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
 
     error DelMundo__NotRay(address caller);
@@ -68,23 +67,27 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     function addAdmin(address newAdmin) external onlyRay {
         _grantRole(RAY_ROLE, newAdmin);
     }
-    function revokeAdmin(address oldAdmin) public onlyRay {
+    function revokeAdmin(address oldAdmin) external onlyRay {
         require (msg.sender != oldAdmin, "Can't revoke yourself");
         _revokeRole(RAY_ROLE, oldAdmin);
     }
-    function pause() public onlyRay {
+    function pause() external onlyRay {
         _pause();
     }
-    function unpause() public onlyRay {
+    function unpause() external onlyRay {
         _unpause();
     }
-    function updateMaxSupply(uint256 newAmount) public onlyRay {
+    function updateMaxSupply(uint256 newAmount) external onlyRay {
         s_currentMaxSupply = newAmount;
     }
-    function updateMaxPerWalletAmount(uint256 newAmount) public onlyRay {
+    function updateMaxPerWalletAmount(uint256 newAmount) external onlyRay {
         s_maxPerWalletAmount = newAmount;
     }
 
+
+    function setDefaultRoyalites(address recipient, uint96 value) external onlyRay {
+        _setDefaultRoyalty(recipient, value);
+    }
 
     /// @notice Returns all tokens owned by an address
     /// @param owner - address of the owner of the Ray tokens
@@ -98,7 +101,7 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
         return rays;
     }
 
-    // OpenSea royalty information
+    // ERC7572 metadata
     string private _contractURI;
     function setContractURI(string memory newURI) public onlyRay  {
         _contractURI = newURI;
@@ -120,7 +123,6 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
             voucher.minPrice
         )));
     }
-
 
     /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
@@ -219,13 +221,13 @@ contract DelMundo is ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable,
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC721, ERC721Enumerable, AccessControl, ERC721URIStorage, ERC2981)
+    override(ERC721, ERC721Enumerable, AccessControl, ERC721URIStorage, ERC721Royalty)
     returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
 
-    function withdraw(address payable account) public payable onlyRay {
+    function withdraw(address payable account) external payable onlyRay {
         if (account == address(0)) {
             revert DelMundo__NullAddressError();
         }

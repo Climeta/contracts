@@ -1,0 +1,10 @@
+{
+  "name": "Del Mundo NFT",
+  "symbol": "DELM",
+  "description": "The Del Mundos are a hand made collection which grants membership and access to the Climeta platform",
+  "image": "ipfs://QmXFg2n5PREWoCggM85uwu2QqSnB2pidfKZpWnuYEbnWvA",
+  "banner_image": "https://storage.googleapis.com/climeta-public-images/climeta-base-announcement.png",
+  "featured_image": "ipfs://QmXFg2n5PREWoCggM85uwu2QqSnB2pidfKZpWnuYEbnWvA",
+  "external_link": "http://climeta.io",
+  "collaborators": ["0x388C818CA8B9251b393131C08a736A67ccB19297"]
+}
