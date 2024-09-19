@@ -24,6 +24,7 @@
     "diamond-util": "^1.1.1",
     "diamond-utils": "^1.0.3",
     "dotenv": "^16.4.5",
-    "ethers": "^6.13.2"
+    "ethers": "^6.13.2",
+    "solc": "^0.8.20"
   }
 }

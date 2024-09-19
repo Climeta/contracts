@@ -79,7 +79,9 @@ contract VotingFacet {
 
 
     constructor(){
-    }
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        vs.nextProposalId= 1;
+        vs.votingRound = 1;    }
 
     /// @notice Returns the version of the contract
     /// @return The version of the contract
@@ -88,12 +90,6 @@ contract VotingFacet {
         return "1.0";
     }
 
-    /// @notice Sets the amount of raywards given for voting. Can only be called by Admins
-    /// @param _reward The new reward amount
-    function setVoteReward(uint256 _reward) public onlyAdmin {
-        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
-        vs.voteReward = _reward;
-    }
 
 
 }

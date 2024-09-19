@@ -6,10 +6,11 @@ import "../src/ClimetaDiamond.sol";
 import "../src/facets/DiamondCutFacet.sol";
 import "../src/facets/DiamondLoupeFacet.sol";
 import "../src/facets/OwnershipFacet.sol";
-import "../test/HelperContract.sol";
+import "../src/utils/DiamondInit.sol";
+//import "../test/HelperContract.sol";
 
 
-contract DeployClimetaDiamond is Script, HelperContract {
+contract DeployClimetaDiamond is Script {
     function run() external {
 
         //read env variables and choose EOA for transaction signing
@@ -26,41 +27,44 @@ contract DeployClimetaDiamond is Script, HelperContract {
         DiamondInit diamondInit = new DiamondInit();
 
 
-        // diamod arguments
-        DiamondArgs memory _args = DiamondArgs({
-            owner: deployerAddress,
-            init: address(diamondInit),
-            initCalldata: abi.encodeWithSignature("init()")
-        });
+//        // diamod arguments
+//        DiamondArgs memory _args = DiamondArgs({
+//            owner: deployerAddress,
+//            init: address(diamondInit),
+//            initCalldata: abi.encodeWithSignature("init()")
+//        });
+//
+//        // FacetCut array which contains the three standard facets to be added
+//        FacetCut[] memory cut = new FacetCut[](3);
+//
+//        cut[0] = FacetCut ({
+//            facetAddress: address(dCutF),
+//            action: IDiamond.FacetCutAction.Add,
+//            functionSelectors: generateSelectors("DiamondCutFacet")
+//        });
+//
+//        cut[1] = (
+//            FacetCut({
+//            facetAddress: address(dLoupeF),
+//            action: FacetCutAction.Add,
+//            functionSelectors: generateSelectors("DiamondLoupeFacet")
+//        })
+//        );
+//
+//        cut[2] = (
+//            FacetCut({
+//            facetAddress: address(ownerF),
+//            action: FacetCutAction.Add,
+//            functionSelectors: generateSelectors("OwnershipFacet")
+//        })
+//        );
+//
+//
+//        // deploy diamond
+//        Diamond diamond = new Diamond(cut, _args);
+//
 
-        // FacetCut array which contains the three standard facets to be added
-        FacetCut[] memory cut = new FacetCut[](3);
-
-        cut[0] = FacetCut ({
-            facetAddress: address(dCutF),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: generateSelectors("DiamondCutFacet")
-        });
-
-        cut[1] = (
-            FacetCut({
-            facetAddress: address(dLoupeF),
-            action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("DiamondLoupeFacet")
-        })
-        );
-
-        cut[2] = (
-            FacetCut({
-            facetAddress: address(ownerF),
-            action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("OwnershipFacet")
-        })
-        );
-
-
-        // deploy diamond
-        Diamond diamond = new Diamond(cut, _args);
+        diamondInit.init(deployerAddress,deployerAddress,deployerAddress,deployerAddress,deployerAddress,deployerAddress,deployerAddress);
 
         vm.stopBroadcast();
     }

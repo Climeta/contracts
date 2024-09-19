@@ -211,7 +211,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         ));
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
-        bytes32 VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
@@ -240,7 +239,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         ));
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
-        bytes32 VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
@@ -392,7 +390,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         ));
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
-        bytes32 VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);

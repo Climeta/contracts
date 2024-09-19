@@ -14,7 +14,7 @@ import "./interfaces/IRayWallet.sol";
 import "./lib/ERC6551AccountLib.sol";
 import {IDelMundoWallet} from "./interfaces/IDelMundoWallet.sol";
 
-contract RayWallet is IERC165, IERC1271, IRayWallet, IDelMundoWallet {
+contract RayWallet is IERC165, IERC1271, IRayWallet, IDelMundoWallet, IERC1155Receiver {
     uint256 public nonce;
 
     function iAmADelMundoWallet() external pure returns (bool) {
@@ -67,7 +67,7 @@ contract RayWallet is IERC165, IERC1271, IRayWallet, IDelMundoWallet {
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return (interfaceId == type(IERC165).interfaceId ||
-            interfaceId == type(IDelMundoWallet).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId || interfaceId == type(IDelMundoWallet).interfaceId ||
             interfaceId == type(IRayWallet).interfaceId);
     }
 
@@ -83,5 +83,25 @@ contract RayWallet is IERC165, IERC1271, IRayWallet, IDelMundoWallet {
         }
 
         return "";
+    }
+
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] memory,
+        uint256[] memory,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
     }
 }

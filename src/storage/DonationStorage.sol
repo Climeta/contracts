@@ -11,8 +11,17 @@ library DonationStorage {
     /// @custom:storage-location erc7201:io.climeta.donation
     struct DonationStruct {
         uint256 minimumDonation;
-        bytes var2;
-        mapping (address => uint) var3;
+        uint256 totalDonatedAmount;
+        // Total donations for every token
+        mapping (address => uint256) totalTokenDonations;
+        // Donator and their total ETH donations
+        mapping (address => uint256) donations;
+        // Array of all ETH donators
+        address[] donators;
+        // Donator and their total ERC20 donations
+        mapping (address => mapping (address => uint256)) erc20donations;
+        // Array of all ERC20 donators
+        address[] erc20donators;
     }
 
     // keccak256(abi.encode(uint256(keccak256("io.climeta.donation")) - 1)) & ~bytes32(uint256(0xff));
