@@ -112,13 +112,4 @@ contract AdminFacet {
             }
         }
     }
-
-    // TODO need a solution to only be able to withdraw raywards from marketplace sales, not voting sales.
-    // This is a potential way to drain funds. Need to think of how to handle this,
-    // Maybe transfer trait sales raywards directly out to the opsWallet
-    function withdrawRaywardTokens(address to, uint256 amount) external onlyOwner {
-        require(IERC20(s.raywardAddress).transfer(to, amount), "Withdraw failed");
-    }
-
-
 }
