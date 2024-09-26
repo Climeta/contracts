@@ -8,7 +8,6 @@ library DonationStorage {
         uint256 amount;
     }
 
-    /// @custom:storage-location erc7201:io.climeta.donation
     struct DonationStruct {
         uint256 minimumDonation;
         uint256 totalDonatedAmount;
@@ -25,6 +24,7 @@ library DonationStorage {
     }
 
     // keccak256(abi.encode(uint256(keccak256("io.climeta.donation")) - 1)) & ~bytes32(uint256(0xff));
+    /// @custom:storage-location erc7201:io.climeta.donation
     bytes32 constant DONATIONSTRUCT_POSITION = 0xec92ca54fc291844a0adb1987da39eaa3844f24476cfb6d71afb4622e33a0300;
 
     function donationStorage()

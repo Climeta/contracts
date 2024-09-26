@@ -20,3 +20,6 @@ seed = "0x2"
 runs = 10000
 depth = 5
 fail_on_revert = false
+
+[rpc_endpoints]
+anvil="${ANVIL_RPC_URL}"

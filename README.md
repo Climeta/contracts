@@ -65,3 +65,8 @@ To deploy the contracts, run the following command:
 ```bash
 forge deploy
 ```
+
+
+
+When deploying a new version of a Facet, unless there are no functions added or removed, then you need to run a Remove of the old before 
+Adding a new one as the replace will simply replace each function in the array. 

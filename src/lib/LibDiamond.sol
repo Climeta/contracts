@@ -13,6 +13,7 @@ import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 error InitializationFunctionReverted(address _initializationContractAddress, bytes _calldata);
 
 library LibDiamond {
+    /// @custom:storage-location erc7201:diamond.standard.diamond.storage
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256(abi.encode(uint256(keccak256("diamond.standard.diamond.storage")) - 1)) & ~bytes32(uint256(0xff));
 
     struct FacetAddressAndPosition {
@@ -25,7 +26,6 @@ library LibDiamond {
         uint256 facetAddressPosition; // position of facetAddress in facetAddresses array
     }
 
-    /// @custom:storage-location erc7201:diamond.standard.diamond.storage
     struct DiamondStorage {
         // maps function selector to the facet address and
         // the position of the selector in the facetFunctionSelectors.selectors array

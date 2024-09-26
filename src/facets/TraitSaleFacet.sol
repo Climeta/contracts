@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
 import {TraitSaleStorage} from "../storage/TraitSaleStorage.sol";
 
-contract DelMundoTraitSale is ERC1155Holder {
+contract TraitSaleFacet is ERC1155Holder {
     ClimetaStorage internal s;
 
     event TokenPriceSet(uint256 indexed tokenId, uint256 price);
@@ -19,7 +19,7 @@ contract DelMundoTraitSale is ERC1155Holder {
     constructor() {
     }
 
-    function setTokenPrice(uint256 tokenId, uint256 price) external onlyOwner {
+    function setTokenPrice(uint256 tokenId, uint256 price) external {
         TraitSaleStorage.TraitSaleStruct storage ts = TraitSaleStorage.traitSaleStorage();
 
         ts.tokenPrices[tokenId] = price;
@@ -43,7 +43,7 @@ contract DelMundoTraitSale is ERC1155Holder {
         emit TokenSold(msg.sender, tokenId, 1, price);
     }
 
-    function withdrawERC1155Tokens(address to, uint256 tokenId, uint256 amount) external onlyOwner {
+    function withdrawERC1155Tokens(address to, uint256 tokenId, uint256 amount) external {
         IERC1155(s.delMundoTraitAddress).safeTransferFrom(address(this), to, tokenId, amount, "");
     }
 }

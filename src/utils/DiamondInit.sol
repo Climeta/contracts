@@ -17,17 +17,17 @@ import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
 
 // It is expected that this contract is customized if you want to deploy your diamond
 // with data from a deployment script. Use the init function to initialize state variables
-// of your diamond. Add parameters to the init funciton if you need to.
+// of your diamond. Add parameters to the init function if you need to.
 
 // Adding parameters to the `init` or other functions you add here can make a single deployed
-// DiamondInit contract reusable accross upgrades, and can be used for multiple diamonds.
+// DiamondInit contract reusable across upgrades, and can be used for multiple diamonds.
 
 contract DiamondInit {
     ClimetaStorage internal s;
 
     // You can add parameters to this function in order to pass in
     // data to set your own state variables
-    function init(address _climeta, address _delMundo, address _rayWallet, address _rayward, address _rayputation, address _opsTreasury, address _registry) external {
+    function init(address _delMundoAddress) external {
         // adding ERC165 data
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         ds.supportedInterfaces[type(IERC165).interfaceId] = true;
@@ -36,14 +36,15 @@ contract DiamondInit {
         ds.supportedInterfaces[type(IERC173).interfaceId] = true;
 
         // Set up all the relevant addresses for Climeta.
-        s.climetaAddress = _climeta;
-        s.delMundoAddress = _delMundo;
-        s.opsTreasuryAddress = _opsTreasury;
-        s.rayputationAddress = _rayputation;
-    
-        s.rayWalletAddress = _rayWallet;
-        s.raywardAddress = _rayward;
-        s.registryAddress = _registry;
+        s.climetaAddress = address(this);
+        s.delMundoAddress = _delMundoAddress;
+        s.raywardAddress = 0x75537828f2ce51be7289709686A69CbFDbB714F1;
+        s.rayputationAddress = 0x856e4424f806D16E8CBC702B3c0F2ede5468eae5;
+        s.rayWalletAddress = 0x3B02fF1e626Ed7a8fd6eC5299e2C54e1421B626B;
+        s.registryAddress =  0x94099942864EA81cCF197E9D71ac53310b1468D8;
+
+
+        s.opsTreasuryAddress = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
         // add your own state variables
         // EIP-2535 specifies that the `diamondCut` function takes two optional

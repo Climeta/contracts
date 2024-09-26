@@ -38,6 +38,15 @@ contract AdminFacet {
         emit Climeta__VotingRewardChanged(_rewardAmount);
         s.votingRoundReward = _rewardAmount;
     }
+    /// @notice gets the amount of raywards given for the voting round.
+    function getVotingRoundReward() public returns(uint256)  {
+        return s.votingRoundReward;
+    }
+
+    /// @notice gets the DelMundo contract address.
+    function getDelMundoAddress() public returns(address)  {
+        return s.delMundoAddress;
+    }
 
     /**
     * @dev Update the ops address. Should be rarely called, if ever, but need the capability to do so. Covered by the onlyAdmin modifier

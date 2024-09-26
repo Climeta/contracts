@@ -9,26 +9,24 @@ pragma solidity 0.8.25;
 /******************************************************************************/
 
 import { LibDiamond } from "./lib/LibDiamond.sol";
-import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
+import "./interfaces/IDiamondCut.sol";
 import {ClimetaStorage} from "./storage/ClimetaStorage.sol";
 import "./interfaces/IDiamondLoupe.sol";
+
+struct DiamondArgs {
+    address owner;
+    address init;
+    bytes initCalldata;
+}
 
 contract ClimetaDiamond {
     ClimetaStorage s;
 
-    constructor(address _contractOwner, address _diamondCutFacet) {
-        LibDiamond.setContractOwner(_contractOwner);
+    constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
+        LibDiamond.setContractOwner(_args.owner);
+        LibDiamond.diamondCut(_diamondCut, _args.init, _args.initCalldata);
 
-        // Add the diamondCut external function from the diamondCutFacet
-        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
-        bytes4[] memory functionSelectors = new bytes4[](1);
-        functionSelectors[0] = IDiamondCut.diamondCut.selector;
-        cut[0] = IDiamondCut.FacetCut({
-            facetAddress: _diamondCutFacet,
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: functionSelectors
-        });
-        LibDiamond.diamondCut(cut, address(0), "");
+        // Code can be added here to perform actions and set state variables.
     }
 
     // Find facet for function that is called and execute the

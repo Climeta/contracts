@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 library VotingStorage {
-    /// @custom:storage-location erc7201:io.climeta.voting
     struct VotingStruct {
         uint256 votingRound;
         uint256 nextProposalId;
@@ -30,6 +29,7 @@ library VotingStorage {
     }
 
     // keccak256(abi.encode(uint256(keccak256("io.climeta.voting")) - 1)) & ~bytes32(uint256(0xff));
+    /// @custom:storage-location erc7201:io.climeta.voting
     bytes32 constant VOTINGSTRUCT_POSITION = 0xfb51f3de952f17d89b384eff8bbf080a8a782750ddcd78fbff0c1a715b8d9800;
 
     function votingStorage()
