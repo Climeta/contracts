@@ -7,19 +7,21 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
 import {TraitSaleStorage} from "../storage/TraitSaleStorage.sol";
+import { LibDiamond } from "../lib/LibDiamond.sol";
+import { ITraitSale } from "../interfaces/ITraitSale.sol";
 
-contract TraitSaleFacet is ERC1155Holder {
+contract TraitSaleFacet is ERC1155Holder, ITraitSale  {
     ClimetaStorage internal s;
-
-    event TokenPriceSet(uint256 indexed tokenId, uint256 price);
-    event TokenSold(address indexed buyer, uint256 indexed tokenId, uint256 amount, uint256 price);
-
-    error DelMundoTraitSale__InsufficientBalance();
 
     constructor() {
     }
 
+    function traitSaleFacetVersion() external pure returns(string memory) {
+        return "1.0";
+    }
+
     function setTokenPrice(uint256 tokenId, uint256 price) external {
+        LibDiamond.enforceIsContractOwner();
         TraitSaleStorage.TraitSaleStruct storage ts = TraitSaleStorage.traitSaleStorage();
 
         ts.tokenPrices[tokenId] = price;
@@ -44,6 +46,7 @@ contract TraitSaleFacet is ERC1155Holder {
     }
 
     function withdrawERC1155Tokens(address to, uint256 tokenId, uint256 amount) external {
+        LibDiamond.enforceIsContractOwner();
         IERC1155(s.delMundoTraitAddress).safeTransferFrom(address(this), to, tokenId, amount, "");
     }
 }

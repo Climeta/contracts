@@ -2,21 +2,12 @@
 pragma solidity ^0.8.25;
 
 import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {LibDiamond} from "../lib/LibDiamond.sol";
+import {IAdmin} from "../interfaces/IAdmin.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract AdminFacet {
+contract AdminFacet is IAdmin {
     ClimetaStorage internal s;
-
-    /// @notice Emitted when a token is approved for use as treasury token
-    /// @param _token The address of the ERC20 token added
-    event Climeta__TokenApproved(address _token);
-    event Climeta__VotingRewardChanged(uint256 amount);
-
-    /// @notice Emitted when a token is revoked for use as treasury token
-    /// @param _token The address of the ERC20 token removed
-    event Climeta__TokenRevoked(address _token);
-
-    error Climeta__ValueStillInContract();
 
     /// @notice Returns the version of the contract
     /// @return The version of the contract
@@ -25,36 +16,55 @@ contract AdminFacet {
         return "1.0";
     }
 
-    modifier onlyAdmin() {
-        if (msg.sender != msg.sender) {
-            revert();
-        }
-        _;
-    }
+    /////////////// GETTERS ////////////////////////////
 
-    /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
-    /// @param _rewardAmount The new reward amount
-    function setVotingRoundReward(uint256 _rewardAmount) public onlyAdmin {
-        emit Climeta__VotingRewardChanged(_rewardAmount);
-        s.votingRoundReward = _rewardAmount;
-    }
     /// @notice gets the amount of raywards given for the voting round.
-    function getVotingRoundReward() public returns(uint256)  {
+    function getVotingRoundReward() external returns(uint256)  {
         return s.votingRoundReward;
     }
-
+    /// @notice gets the Ops Treasury address.
+    function getOpsTreasuryAddress() external returns(address)  {
+        return s.opsTreasuryAddress;
+    }
     /// @notice gets the DelMundo contract address.
-    function getDelMundoAddress() public returns(address)  {
+    function getDelMundoAddress() external returns(address)  {
         return s.delMundoAddress;
     }
+    /// @notice gets the DelMundoTraits contract address.
+    function getDelMundoTraitAddress() external returns(address)  {
+        return s.delMundoTraitAddress;
+    }
+    /// @notice gets the Rayward contract address.
+    function getRaywardAddress() external returns(address)  {
+        return s.raywardAddress;
+    }
+    /// @notice gets the Rayputation contract address.
+    function getRayputationAddress() external returns(address)  {
+        return s.rayputationAddress;
+    }
+     /// @notice gets the ERC6551 Registry address.
+    function getRegistryAddress() external returns(address)  {
+        return s.registryAddress;
+    }
+
+    /////////////// SETTERS ////////////////////////////
 
     /**
     * @dev Update the ops address. Should be rarely called, if ever, but need the capability to do so. Covered by the onlyAdmin modifier
     * to ensure only admins can do this, given this is a 10% diversion of funds.
     * @param _ops The address of the new ops treasury.
     */
-    function updateOpsAddress(address payable _ops) public onlyAdmin {
+    function updateOpsTreasuryAddress(address payable _ops) external {
+        LibDiamond.enforceIsContractOwner();
         s.opsTreasuryAddress = _ops;
+    }
+
+    /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
+    /// @param _rewardAmount The new reward amount
+    function setVotingRoundReward(uint256 _rewardAmount) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__VotingRewardChanged(_rewardAmount);
+        s.votingRoundReward = _rewardAmount;
     }
 
     /// @notice Adds a new beneficiary
@@ -84,7 +94,7 @@ contract AdminFacet {
     function isAllowedToken(address _token) internal view returns(bool) {
         uint256 length = s.allowedTokens.length;
         for (uint256 i = 0; i < length; i++) {
-            if (s.allowedTokens[i] == address(_token)) {
+            if (s.allowedTokens[i] == _token) {
                 return true;
             }
         }
@@ -93,25 +103,27 @@ contract AdminFacet {
 
     /// @notice Adds an ERC20 to the list of allowed tokens
     /// @param _token The allowed token to add
-    function addAllowedToken(IERC20 _token) public onlyAdmin {
-        if (!isAllowedToken(address(_token))) {
-            s.allowedTokens.push() = address(_token);
-            emit Climeta__TokenApproved(address(_token));
+    function addAllowedToken(address _token) external {
+        LibDiamond.enforceIsContractOwner();
+        if (!isAllowedToken(_token)) {
+            s.allowedTokens.push() = _token;
+            emit Climeta__TokenApproved(_token);
         }
     }
 
     /// @notice Removes an ERC20 from the list of allowed tokens
     /// Cannot remove if there is still value left in the treasury.
     /// @param _token The allowed token to add
-    function removeAllowedToken(IERC20 _token) public onlyAdmin {
-        if (_token.balanceOf(address(this)) > 0) {
+    function removeAllowedToken(address _token) external {
+        LibDiamond.enforceIsContractOwner();
+        if (IERC20(_token).balanceOf(address(this)) > 0) {
             revert Climeta__ValueStillInContract();
         }
 
         uint256 numberOfTokens = s.allowedTokens.length;
         // remove from array of proposals for this voting round
         for (uint256 i=0; i < numberOfTokens;i++) {
-            if (s.allowedTokens[i] == address(_token)) {
+            if (s.allowedTokens[i] == _token) {
                 for (uint256 j=i; j + 1 < numberOfTokens ; j++ ) {
                     s.allowedTokens[j] = s.allowedTokens[j+1];
                 }

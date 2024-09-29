@@ -7,7 +7,7 @@ import "../../src/RayWallet.sol";
 import "../../src/token/Rayward.sol";
 import "../../src/token/DelMundo.sol";
 import {DeployAll} from "../../script/DeployAll.s.sol";
-import {DeployClimetaDiamond} from "../../script/DeployDiamond.s.sol";
+import {DeployClimetaDiamond} from "../../script/DeployClimetaDiamond.s.sol";
 
 contract ClimetaDiamondTest is Test {
 
@@ -31,7 +31,7 @@ contract ClimetaDiamondTest is Test {
 
 
 
-        address raysWallet = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+//        address raysWallet = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 
     }
 

@@ -30,7 +30,7 @@ library VotingStorage {
 
     // keccak256(abi.encode(uint256(keccak256("io.climeta.voting")) - 1)) & ~bytes32(uint256(0xff));
     /// @custom:storage-location erc7201:io.climeta.voting
-    bytes32 constant VOTINGSTRUCT_POSITION = 0xfb51f3de952f17d89b384eff8bbf080a8a782750ddcd78fbff0c1a715b8d9800;
+    bytes32 constant VOTINGSTRUCT_POSITION = keccak256(abi.encode(uint256(keccak256("io.climeta.voting")) - 1)) & ~bytes32(uint256(0xff));
 
     function votingStorage()
     internal

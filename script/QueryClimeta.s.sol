@@ -2,43 +2,37 @@
 pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
+import {IAdmin} from "../src/interfaces/IAdmin.sol";
+import {IDiamondLoupe} from "../src//interfaces/IDiamondLoupe.sol";
 
-struct Facet {
-    address facetAddress;
-    bytes4[] functionSelectors;
-}
-
-interface IClimeta {
-    function facets() external view returns (Facet[] memory facets_) ;
-    function adminFacetVersion() external pure returns (string memory);
-    function getVotingRoundReward() external returns(uint256);
-    function setVotingRoundReward(uint256 _rewardAmount) external;
-    function getDelMundoAddress() external returns(address);
-}
 
 contract QueryClimeta is Script {
 
     function run() external {
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
-        IClimeta climeta = IClimeta(climetaAddress);
+        IDiamondLoupe climeta = IDiamondLoupe(climetaAddress);
         console.log("Climeta address", address(climeta));
 
-        Facet[] memory facets = climeta.facets();
+        IDiamondLoupe.Facet[] memory facets = climeta.facets();
         console.log("number of facets ", facets.length);
         console.log("Facet 1:", facets[0].facetAddress);
 
+        IAdmin climetaAdmin = IAdmin(climetaAddress);
 
-        string memory version = climeta.adminFacetVersion();
+        string memory version = climetaAdmin.adminFacetVersion();
         console.log("AdminFacet version:", version);
 
-        uint256 reward = climeta.getVotingRoundReward();
+        uint256 reward = climetaAdmin.getVotingRoundReward();
         console.log("Reward for voting round :", reward);
-        climeta.setVotingRoundReward(100000);
-        reward = climeta.getVotingRoundReward();
+        vm.startPrank(vm.envAddress("DEPLOYER_PUBLIC_KEY"));
+        climetaAdmin.setVotingRoundReward(100000);
+        vm.stopPrank();
+        reward = climetaAdmin.getVotingRoundReward();
         console.log("Reward for voting round :", reward);
 
-        address delMundoAddr = climeta.getDelMundoAddress();
+        address delMundoAddr = climetaAdmin.getDelMundoAddress();
         console.log("DelMundo Address stored :", delMundoAddr);
-
+        address opsAddr = climetaAdmin.getOpsTreasuryAddress();
+        console.log("Ops Address stored :", opsAddr);
     }
 }

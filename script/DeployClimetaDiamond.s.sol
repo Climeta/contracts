@@ -60,7 +60,7 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
 
         // deploy diamond
         ClimetaDiamond diamond = new ClimetaDiamond(cut, _args);
-        console.log("Climeta address:", address(diamond));
+        console.log("CLIMETA_ADDRESS=", address(diamond));
         vm.stopBroadcast();
     }
 }

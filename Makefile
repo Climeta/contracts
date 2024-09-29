@@ -17,6 +17,7 @@ forge create --rpc-url <ALCHEMY_URL> --private-key <DEPLOY_PRIVATE_KEY> src/toke
 
 deploy-delmundo-sepolia: forge create --rpc-url <ALCHEMY_URL> --private-key <PRIVATE_KEY> src/token/DelMundo.sol:DelMundo --constructor-args $(cast abi-encode --packed "constructor(address)" "0x348F389d3C8b68cdb089E101b2e6838FfFF7A20E") --verify
 
-deploy_all_local: forge script script/DeployAll.s.sol --rpc-url anvil --ffi --force --broadcast
-deploy_diamond_local: forge script script/DeployAll.s.sol --rpc-url anvil --ffi --force --broadcast
-query_local: CLIMETA_ADDRESS=0x959922be3caee4b8cd9a407cc3ac1c251c2007b1 forge script script/QueryClimeta.s.sol --rpc-url anvil --ffi
+deploy_all_local: forge script script/DeployAll.s.sol --rpc-url anvil --broadcast
+deploy_diamond_local: forge script script/DeployClimetaDiamond.s.sol --rpc-url anvil --broadcast
+deploy_admin_local: forge script script/DeployAdminFacet.s.sol --rpc-url anvil --broadcast
+query_local: forge script script/QueryClimeta.s.sol --rpc-url anvil
