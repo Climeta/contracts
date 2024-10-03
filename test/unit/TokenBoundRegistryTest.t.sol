@@ -25,7 +25,7 @@ contract TokenBoundRegistryTest is Test {
         rayWallet = RayWallet(payable(rayWalletDeployer.run()));
 
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.run(admin));
+        delMundo = DelMundo(delMundoDeployer.deploy(admin));
     }
 
     function test_Account() public {

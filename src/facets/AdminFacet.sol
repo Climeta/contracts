@@ -18,10 +18,6 @@ contract AdminFacet is IAdmin {
 
     /////////////// GETTERS ////////////////////////////
 
-    /// @notice gets the amount of raywards given for the voting round.
-    function getVotingRoundReward() external returns(uint256)  {
-        return s.votingRoundReward;
-    }
     /// @notice gets the Ops Treasury address.
     function getOpsTreasuryAddress() external returns(address)  {
         return s.opsTreasuryAddress;
@@ -59,13 +55,6 @@ contract AdminFacet is IAdmin {
         s.opsTreasuryAddress = _ops;
     }
 
-    /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
-    /// @param _rewardAmount The new reward amount
-    function setVotingRoundReward(uint256 _rewardAmount) external {
-        LibDiamond.enforceIsContractOwner();
-        emit Climeta__VotingRewardChanged(_rewardAmount);
-        s.votingRoundReward = _rewardAmount;
-    }
 
     /// @notice Adds a new beneficiary
     /// @param _beneficiary The address of the new beneficiary
@@ -88,49 +77,4 @@ contract AdminFacet is IAdmin {
 //            emit ClimetaCore__RemovedBeneficiary(_beneficiary);
 //        }
 //    }
-
-    /// @notice Checks the ERC20 against list of allowed tokens
-    /// @param _token The token to check
-    function isAllowedToken(address _token) internal view returns(bool) {
-        uint256 length = s.allowedTokens.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (s.allowedTokens[i] == _token) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /// @notice Adds an ERC20 to the list of allowed tokens
-    /// @param _token The allowed token to add
-    function addAllowedToken(address _token) external {
-        LibDiamond.enforceIsContractOwner();
-        if (!isAllowedToken(_token)) {
-            s.allowedTokens.push() = _token;
-            emit Climeta__TokenApproved(_token);
-        }
-    }
-
-    /// @notice Removes an ERC20 from the list of allowed tokens
-    /// Cannot remove if there is still value left in the treasury.
-    /// @param _token The allowed token to add
-    function removeAllowedToken(address _token) external {
-        LibDiamond.enforceIsContractOwner();
-        if (IERC20(_token).balanceOf(address(this)) > 0) {
-            revert Climeta__ValueStillInContract();
-        }
-
-        uint256 numberOfTokens = s.allowedTokens.length;
-        // remove from array of proposals for this voting round
-        for (uint256 i=0; i < numberOfTokens;i++) {
-            if (s.allowedTokens[i] == _token) {
-                for (uint256 j=i; j + 1 < numberOfTokens ; j++ ) {
-                    s.allowedTokens[j] = s.allowedTokens[j+1];
-                }
-                s.allowedTokens.pop();
-                emit Climeta__TokenRevoked(address(_token));
-                return;
-            }
-        }
-    }
 }

@@ -13,23 +13,6 @@ struct ClimetaStorage {
     uint256 everyoneVoteReward;
     // TODO how do we handle constants in a diamond? Consts file?
     uint256 CLIMETA_PERCENTAGE;
-    // for each charity address, store all the amounts available  to withdraw
-    mapping(address => mapping(address => uint256)) erc20Withdrawls;
-    // for each Token, store all the individual donations
-    mapping(address => mapping(address => uint256)) erc20Donations;
-    // donations of ETH from donators
-    mapping(address => uint256) ethDonations;
-    // list of charity addresses and their ETH balances
-    mapping(address => uint256) ethWithdrawls;
-    // ERC20 tokens approved for use within Climeta
-    address[] allowedTokens;
-    // List of token balances for each token
-    mapping(address => uint256) tokenBalances;
-    // ETH send to projects
-    uint256 totalETHToProjects;
-    // list of charity addresses and their ETH balances
-    mapping(address => uint256) totalTokenToProjects;
-    uint256 votingRoundReward;
 
     // Charities + Brands
     // Mapping to hold the beneficiary address and the data -

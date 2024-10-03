@@ -34,22 +34,27 @@ contract DeployAll is Script {
 
         vm.startBroadcast(deployerPrivateKey);
         DeployDelMundo delMundo = new DeployDelMundo();
-        delMundoAddr = delMundo.run(admin);
+        delMundoAddr = delMundo.deploy(admin);
         console.log("DELMUNDO_ADDRESS=", delMundoAddr);
 
         DeployRayward rayward = new DeployRayward();
         raywardAddr = rayward.run(admin);
+        console.log("RAYWARD_ADDRESS=", raywardAddr);
 
         DeployRayputation rayputation = new DeployRayputation();
         rayputationAddr = rayputation.deploy(admin);
+        console.log("RAYPUTATION_ADDRESS=", rayputationAddr);
 
         DeployRayWallet deployWallet = new DeployRayWallet();
         wallet = deployWallet.run();
+        console.log("DELMUNDO_WALLET_ADDRESS=", wallet);
 
         DeployTokenBoundRegistry registry = new DeployTokenBoundRegistry();
         registryAddr = registry.run();
+        console.log("REGISTRY_ADDRESS=", registryAddr);
         chainId = vm.envUint("CHAINID");
         rayWallet = IERC6551Registry(registryAddr).account(wallet, 0, chainId, delMundoAddr, 0);
+        console.log("RAY_WALLET_ADDRESS=", rayWallet);
 
         DeployDiamondFacets coreFacets = new DeployDiamondFacets();
         (diamondcut, diamondLoupe, ownership) = coreFacets.run();

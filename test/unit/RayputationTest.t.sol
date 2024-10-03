@@ -15,7 +15,7 @@ contract RayputationTest is Test {
     function setUp() public {
         admin = makeAddr("admin");
         DeployRayputation rayputationDeployer = new DeployRayputation();
-        rayputation = Rayputation(payable(rayputationDeployer.run(admin)));
+        rayputation = Rayputation(payable(rayputationDeployer.deploy(admin)));
     }
 
     function test_RayputationDecimals() public view {

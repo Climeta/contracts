@@ -23,5 +23,4 @@ cache_hardhat/
 /.github/
 /coverage/
 /coverage.json
-/lib/
 /broadcast/

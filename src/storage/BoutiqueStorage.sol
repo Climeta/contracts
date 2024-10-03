@@ -5,7 +5,7 @@ library BoutiqueStorage {
     struct BoutiqueStruct {
         // Collection address, tokenId, sold?
         mapping(address => mapping(uint256 => bool)) erc721Items;
-        // Collection address, tokenId, amount_sold
+        // Collection address, tokenId, amount_remaining
         mapping(address => mapping(uint256 => uint256)) erc1155Items;
         // Collection address, tokenId, price
         mapping(address => mapping(uint256 => uint256)) itemPriceRaywayrds;

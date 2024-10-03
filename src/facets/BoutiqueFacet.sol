@@ -19,20 +19,20 @@ contract BoutiqueFacet {
 
     function addCollection(address _collection) external {
         LibDiamond.enforceIsContractOwner();
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
-        bs.collections.push(_address);
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
+        bs.collections.push(_collection);
     }
 
     function removeCollection(address _collection) external {
         LibDiamond.enforceIsContractOwner();
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         // TODO remove from array code
         //bs.collections.pop();
     }
 
     function addERC721Item(address _collection, uint256 _tokenId, uint256 _priceRaywards, uint256 _priceEth) external {
         LibDiamond.enforceIsContractOwner();
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         bs.itemPriceRaywayrds[_collection][_tokenId] = _priceRaywards;
         bs.itemPriceEth[_collection][_tokenId] = _priceEth;
         IERC721(_collection).safeTransferFrom(msg.sender, address(this), _tokenId, "");
@@ -40,7 +40,7 @@ contract BoutiqueFacet {
 
     function addERC1155Item(address _collection, uint256 _tokenId, uint256 _amount, uint256 _priceRaywards, uint256 _priceEth) external {
         LibDiamond.enforceIsContractOwner();
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         bs.itemPriceRaywayrds[_collection][_tokenId] = _priceRaywards;
         bs.itemPriceEth[_collection][_tokenId] = _priceEth;
         IERC1155(_collection).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, "");
@@ -48,7 +48,7 @@ contract BoutiqueFacet {
 
     function removeERC721Item(address _collection, uint256 _tokenId) external {
         LibDiamond.enforceIsContractOwner();
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         bs.itemPriceRaywayrds[_collection][_tokenId] = 0;
         bs.itemPriceEth[_collection][_tokenId] = 0;
         IERC721(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, "");
@@ -56,36 +56,36 @@ contract BoutiqueFacet {
 
     function removeERC1155Item(address _collection, uint256 _tokenId, uint256 _amount) external {
         LibDiamond.enforceIsContractOwner();
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         bs.itemPriceRaywayrds[_collection][_tokenId] = 0;
         bs.itemPriceEth[_collection][_tokenId] = 0;
         IERC1155(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, "");
     }
 
     function buyERC721Item(address _collection, uint256 _tokenId) external payable {
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         uint256 priceInRaywards = bs.itemPriceRaywayrds[_collection][_tokenId];
         uint256 priceInEth = bs.itemPriceEth[_collection][_tokenId];
 
-        require(erc721Items[_collection][_tokenId] == false, "Sold");
+        require(bs.erc721Items[_collection][_tokenId] == false, "Sold");
 
         if (priceInEth > msg.value) {
             revert();
         }
         require( IERC20(s.raywardAddress).transferFrom(msg.sender, s.opsTreasuryAddress, priceInRaywards), "Payment failed");
 
-        erc721Items[_collection][_tokenId] = true;
+        bs.erc721Items[_collection][_tokenId] = true;
 
         IERC721(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, "");
     }
 
 
-    function buyERC721Item(address _collection, uint256 _tokenId) external payable {
-        BoutiqueStruct bs = BoutiqueStorage.boutiqueStorage();
+    function buyERC1155Item(address _collection, uint256 _tokenId) external payable {
+        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         uint256 priceInRaywards = bs.itemPriceRaywayrds[_collection][_tokenId];
         uint256 priceInEth = bs.itemPriceEth[_collection][_tokenId];
 
-        require(erc1155Items[_collection][_tokenId] == false, "Sold");
+        require(bs.erc1155Items[_collection][_tokenId] > 0, "Sold");
 
         if (priceInEth > msg.value) {
             revert();

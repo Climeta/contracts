@@ -3,29 +3,17 @@ pragma solidity ^0.8.25;
 
 import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
 import {DonationStorage} from "../storage/DonationStorage.sol";
+import {IDonation} from "../interfaces/IDonation.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {Constants} from "../lib/Constants.sol";
+import {LibDiamond} from "../lib/LibDiamond.sol";
 
-contract DonationFacet {
+contract DonationFacet is IDonation {
     ClimetaStorage internal s;
-
-    /// @notice Emitted when a donation is made
-    /// @param _benefactor The address of the benefactor making the donation
-    /// @param _amount The amount of the donation
-    event Climeta__Donation(address _benefactor, uint256 _amount);
-
-    /// @notice Emitted when an ERC20 donation is made
-    /// @param _benefactor The address of the benefactor making the donation
-    /// @param _token The ERC20 token donated
-    /// @param _amount The amount of the donation
-    event Climeta__ERC20Donation(address _benefactor, address _token, uint256 _amount);
-
-    error Climeta__NotValueToken();
-    error Climeta__DonationNotAboveThreshold();
 
     constructor() {
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
-        ds.minimumDonation = 0;
+        ds.minimumEthDonation = 1 ether;
     }
 
     /// @notice Returns the version of the contract
@@ -33,6 +21,28 @@ contract DonationFacet {
     /// @dev This function will change when the implementation changes
     function donationFacetVersion() external pure returns (string memory) {
         return "1.0";
+    }
+
+        function getMinimumERC20Donation(address _address) external view returns(uint256) {
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        return ds.minimumERC20Donations[_address];
+    }
+
+    function setMinimumERC20Donation(address _address, uint256 _amount) external {
+        LibDiamond.enforceIsContractOwner();
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        ds.minimumERC20Donations[_address] = _amount;
+    }
+
+    function getMinimumEthDonation() external view returns(uint256) {
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        return ds.minimumEthDonation;
+    }
+
+    function setMinimumEthDonation(uint256 _amount) external {
+        LibDiamond.enforceIsContractOwner();
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        ds.minimumEthDonation = _amount;
     }
 
     /**
@@ -50,7 +60,7 @@ contract DonationFacet {
     */
     /// @notice Checks the ERC20 against list of allowed tokens
     /// @param _token The token to check
-    function isAllowedToken(address _token) public view returns(bool) {
+    function isAllowedToken(address _token) external view returns(bool) {
         uint256 length = s.allowedTokens.length;
         for (uint256 i = 0; i < length; i++) {
             if (s.allowedTokens[i] == address(_token)) {
@@ -73,7 +83,7 @@ contract DonationFacet {
 
     function donate() payable external {
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
-        if (msg.value < ds.minimumDonation) {
+        if (msg.value < ds.minimumEthDonation) {
             revert Climeta__DonationNotAboveThreshold();
         }
         emit Climeta__Donation(msg.sender, msg.value);
@@ -90,23 +100,26 @@ contract DonationFacet {
     }
 
     // @dev Pull some tokens from donator. They must have been pre-approved.
-    function donateToken(IERC20 token, uint256 amount) external {
+    function donateToken(address _token, uint256 _amount) external {
         // check if token is allowed
-        if (!isAllowedToken(address(token))) {
+        if (!isAllowedToken(_token)) {
             revert Climeta__NotValueToken();
         }
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        if (_amount < ds.minimumERC20Donations[_token]) {
+            revert Climeta__DonationNotAboveThreshold();
+        }
         if (!hasDonatedERC20(msg.sender)) {
             ds.erc20donators.push(msg.sender);
         }
-        emit Climeta__ERC20Donation(msg.sender, address(token), amount);
-        token.transferFrom(msg.sender, address(this), amount);
-        s.tokenBalances[address(token)] += amount;
-        ds.erc20donations[msg.sender][address(token)] += amount;
-        ds.totalTokenDonations[address(token)] += amount;
+        emit Climeta__ERC20Donation(msg.sender, _token, _amount);
+        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        s.tokenBalances[_token] += _amount;
+        ds.erc20donations[msg.sender][_token] += _amount;
+        ds.totalTokenDonations[_token] += _amount;
 
-        uint256 opsAmount = (amount * Constants.CLIMETA_PERCENTAGE) / 100;
-        token.transfer(s.opsTreasuryAddress, opsAmount);
+        uint256 opsAmount = (_amount * Constants.CLIMETA_PERCENTAGE) / 100;
+        IERC20(_token).transfer(s.opsTreasuryAddress, opsAmount);
     }
 
 }

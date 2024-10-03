@@ -40,7 +40,7 @@ contract ClimetaCoreInvariant is Test {
         rayward = Rayward(payable(raywardDeployer.run(admin)));
 
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.run(admin));
+        delMundo = DelMundo(delMundoDeployer.deploy(admin));
 
         DeployTokenBoundRegistry registryDeployer = new DeployTokenBoundRegistry();
         registry = ERC6551Registry(registryDeployer.run());

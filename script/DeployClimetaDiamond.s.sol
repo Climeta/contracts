@@ -2,11 +2,11 @@
 pragma solidity ^0.8.25;
 
 import "forge-std/Script.sol";
-import "../src/ClimetaDiamond.sol";
-import "../src/facets/DiamondCutFacet.sol";
-import "../src/facets/DiamondLoupeFacet.sol";
-import "../src/facets/OwnershipFacet.sol";
-import "../src/utils/DiamondInit.sol";
+import {ClimetaDiamond, DiamondArgs} from "../src/ClimetaDiamond.sol";
+import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
+import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
+import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
+import {DiamondInit} from "../src/utils/DiamondInit.sol";
 import "../src/utils/DiamondHelper.sol";
 
 contract DeployClimetaDiamond is Script, DiamondHelper {

@@ -9,7 +9,8 @@ library DonationStorage {
     }
 
     struct DonationStruct {
-        uint256 minimumDonation;
+        uint256 minimumEthDonation;
+        mapping(address => uint256) minimumERC20Donations;
         uint256 totalDonatedAmount;
         // Total donations for every token
         mapping (address => uint256) totalTokenDonations;

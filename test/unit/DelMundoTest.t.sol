@@ -46,7 +46,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function setUp() public {
         (admin, adminPk) = makeAddrAndKey("admin");
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.run(admin));
+        delMundo = DelMundo(delMundoDeployer.deploy(admin));
         address current = address(this);
 
         vm.prank(admin);

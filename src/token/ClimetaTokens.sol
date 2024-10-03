@@ -20,7 +20,7 @@ contract ClimetaTokens is ERC1155, ERC1155URIStorage,  Ownable {
     function mint(uint256 _id, address _address)
     external
     {
-        if (!releasedTokens[_id]) {
+        if (releasedTokens[_id]) {
             revert ClimetaTokens__NotCreatedYet();
         }
 
@@ -38,7 +38,7 @@ contract ClimetaTokens is ERC1155, ERC1155URIStorage,  Ownable {
         releasedTokens[_id] = true;
     }
 
-    function uri(uint256 _id) external view override (ERC1155URIStorage, ERC1155) returns (string memory) {
+    function uri(uint256 _id) public view override (ERC1155URIStorage, ERC1155) returns (string memory) {
         return metadata[_id];
     }
 }

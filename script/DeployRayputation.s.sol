@@ -12,7 +12,7 @@ contract DeployRayputation is Script {
     }
 
     function run() external {
-        address admin = vm.envAddress("DEPLOYER_PUBLIC_KEY");
+        address admin = vm.envAddress("OWNER_PUBLIC_KEY");
         address rayputation = this.deploy(admin);
     }
 
