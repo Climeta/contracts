@@ -58,6 +58,13 @@ contract AdminFacet is IAdmin {
         emit Climeta__VotingRewardChanged(_rewardAmount);
         s.votingRoundReward = _rewardAmount;
     }
+    /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
+    /// @param _withdrawRewardOnly The new reward amount
+    function setVotingRoundReward(bool _withdrawRewardOnly) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__RewardWithdrawalTypeChange(_withdrawRewardOnly);
+        s.withdrawRewardsOnly = _withdrawRewardOnly;
+    }
 
 
     /////////////// SETTERS ////////////////////////////

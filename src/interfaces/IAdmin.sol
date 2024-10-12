@@ -5,6 +5,7 @@ interface IAdmin {
     event Climeta__TokenApproved(address _token);
     event Climeta__VotingRewardChanged(uint256 amount);
     event Climeta__TokenRevoked(address _token);
+    event Climeta__RewardWithdrawalTypeChange(bool value);
 
     error Climeta__ValueStillInContract();
 

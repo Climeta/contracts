@@ -5,6 +5,7 @@ import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
 import {LibDiamond} from "../lib/LibDiamond.sol";
 import {Constants} from "../lib/Constants.sol";
 import {VotingStorage} from "../storage/VotingStorage.sol";
+import {RewardStorage} from "../storage/RewardStorage.sol";
 import {IVoting} from "../interfaces/IVoting.sol";
 import {DelMundo} from "../token/DelMundo.sol";
 import {Rayward} from "../token/Rayward.sol";
@@ -215,7 +216,7 @@ contract VotingFacet is IVoting{
     }
 
     /**
-    * @dev Allows Climeta admins to push the funds directly to the beneficaries
+    * @dev Allows Climeta admins to push the funds directly to the beneficiaries
     *
     * This is really for those beneficiaries that may not be able to withdraw themselves for whatever reason.
     * This does not give Climeta access to the voting funds, once marked as vote end, the only place the funds can go
@@ -313,8 +314,16 @@ contract VotingFacet is IVoting{
         vs.votingRound++;
     }
 
+    function sendRaywards(address _to, uint256 _amount) external {
+        LibDiamond.enforceIsContractOwner();
+        Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, _to, _amount);
+    }
+
+    // TODO need to check if this can run if there are 1000s of voters. May need to simply allocate to withdraw functions.
     function processRewards(uint256 _totalVotes) internal {
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        RewardStorage.RewardStruct storage rs = RewardStorage.rewardStorage();
+
         uint256 m_votingRound = vs.votingRound;
         uint256 voteCount = vs.votes[vs.votingRound].length;
         uint256 totalCognition = 0;
@@ -330,12 +339,28 @@ contract VotingFacet is IVoting{
             address delmundoOwner = IRayWallet(payable(msg.sender)).owner();
 
             // Formula for Raywards = 50% split across all voters and rest split by proportion of raycognition
+            // If push of raywards fails - add to withdraw capability
             uint256 rewardAmount = ((s.votingRoundReward / 2) / _totalVotes)  + ((s.votingRoundReward / 2) / (raycognition/totalCognition)  );
-            try {
-                Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, delmundoOwner, rewardAmount);
-            } catch {
-                //TODO - add Raywards to a withdrawal process.
+            if (!s.withdrawRewardsOnly) {
+                try this.sendRaywards(delmundoOwner, rewardAmount) {
+                }
+                catch {
+
+                }
+            } else {
+                rs.claimableRaywards[delmundoOwner] += rewardAmount;
             }
+        }
+    }
+
+    function withdrawRaywards() external {
+        RewardStorage.RewardStruct storage rs = RewardStorage.rewardStorage();
+        uint256 amount = rs.claimableRaywards[msg.sender];
+
+        if (amount > 0) {
+            rs.claimableRaywards[msg.sender] = 0;
+            emit Climeta__RewardClaimed(msg.sender, amount);
+            Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, msg.sender, amount);
         }
     }
 }

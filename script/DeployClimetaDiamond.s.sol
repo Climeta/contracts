@@ -21,6 +21,7 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
         address _raywalletAddress = vm.envAddress("RAYWALLET_ADDRESS");
         address _delmundowalletAddress = vm.envAddress("DELMUNDOWALLET_ADDRESS");
         address _registryAddress = vm.envAddress("REGISTRY_ADDRESS");
+        address _ops = vm.envAddress("OPS_TREASURY_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -35,7 +36,7 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
         DiamondArgs memory _args = DiamondArgs({
             owner: deployerAddress,
             init: address(diamondInit),
-            initCalldata: abi.encodeWithSignature("init(address,address,address,address,address,address)", _delMundoAddress, _raywardAddress, _raycognitionAddress, _delmundowalletAddress, _raywalletAddress, _registryAddress)
+            initCalldata: abi.encodeWithSignature("init(address,address,address,address,address,address,address)", _delMundoAddress, _raywardAddress, _raycognitionAddress, _delmundowalletAddress, _raywalletAddress, _registryAddress, _ops)
         });
 
         // FacetCut array which contains the three standard facets to be added

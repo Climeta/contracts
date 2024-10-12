@@ -14,6 +14,7 @@ struct ClimetaStorage {
     uint256 everyoneVoteReward;
     address[] allowedTokens;
     uint256 votingRoundReward;
+    bool withdrawRewardsOnly;
 
     // for each charity address, store all the amounts available  to withdraw
     mapping(address => mapping(address => uint256)) erc20Withdrawls;

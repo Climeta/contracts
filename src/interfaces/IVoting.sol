@@ -15,6 +15,11 @@ interface IVoting {
     /// @param _amount The amount of the payout
     event Climeta__ERC20Payout(address _to, address _token, uint256 _amount);
 
+    /// @notice Emitted when an ERC20 payout is made
+    /// @param _claimer The address withdrawing
+    /// @param _amount The amount of the withdrawal
+    event Climeta__RewardClaimed(address _claimer, uint256 _amount);
+
     /// @notice Emitted when a vote is cast
     /// @param _votingNFT The NFT used to vote
     /// @param _proposalId The ID of the proposal being voted on

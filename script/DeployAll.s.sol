@@ -48,7 +48,7 @@ contract DeployAll is Script {
 
         DeployRayWallet deployWallet = new DeployRayWallet();
         wallet = deployWallet.run();
-        console.log("DELMUNDO_WALLET_ADDRESS=", wallet);
+        console.log("DELMUNDOWALLET_ADDRESS=", wallet);
 
         DeployTokenBoundRegistry registry = new DeployTokenBoundRegistry();
         registryAddr = registry.run();
