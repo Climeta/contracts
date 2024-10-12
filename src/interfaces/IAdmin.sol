@@ -9,15 +9,17 @@ interface IAdmin {
     error Climeta__ValueStillInContract();
 
     function adminFacetVersion() external pure returns (string memory);
-    function setVotingRoundReward(uint256 _rewardAmount) external;
-    function getVotingRoundReward() external returns (uint256);
     function updateOpsTreasuryAddress(address payable _ops) external;
     function addAllowedToken(address _token) external;
     function removeAllowedToken(address _token) external;
     function getOpsTreasuryAddress() external returns(address);
     function getDelMundoAddress() external returns(address);
     function getDelMundoTraitAddress() external returns(address);
+    function getDelMundoWalletAddress() external returns(address);
     function getRaywardAddress() external returns(address);
-    function getRayputationAddress() external returns(address);
+    function getRaycognitionAddress() external returns(address);
     function getRegistryAddress() external returns(address);
+    function setVotingRoundReward(uint256 _rewardAmount) external;
+    function getVotingRoundReward() external returns (uint256);
+
 }

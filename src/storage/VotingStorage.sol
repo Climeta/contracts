@@ -5,39 +5,26 @@ library VotingStorage {
     struct VotingStruct {
         uint256 votingRound;
         uint256 nextProposalId;
-        uint256 votingRoundReward;
-
-        // for each charity address, store all the amounts available  to withdraw
-        mapping(address => mapping(address => uint256)) erc20Withdrawls;
-        // for each Token, store all the individual donations
-        mapping(address => mapping(address => uint256)) erc20Donations;
-        mapping(address => uint256) tokenBalances;
-        // ETH send to projects
-        uint256 totalETHToProjects;
-        // list of charity addresses and their ETH balances
-        mapping(address => uint256) totalTokenToProjects;
 
         // proposal id and its metadata uri
         mapping(uint256 => string) proposals;
         mapping(uint256 => address) proposalOwner;
-        address[] allowedTokens;
 
-        // Charity address mapping to a mapping of proposals id for that voting round :
-        // charity address => voting round => proposals
-        mapping(address => mapping(uint256 => uint256)) beneficiaryProposals;
         // List of the accepted proposals in each Voting round
         mapping(uint256 => uint256[]) votingRoundProposals;
+        mapping(uint256 => uint256) proposalVotingRound;
 
         // Votes
         // mapping to show who has already voted in each round. Voting round => Del Mundo => true/false
-        mapping(uint256 => mapping(uint256 => bool)) s_votingRoundDelMundoVoters;
+        mapping(uint256 => mapping(uint256 => bool)) votingRoundDelMundoVoters;
         // mapping to show proposal and the membership voting array
-        mapping(uint256 => uint256[]) s_votes;
+        mapping(uint256 => uint256[]) votes;
 
-        // Withdrawls
+        // Withdrawals
         // Mapping to hold the amounts the beneficiaries can withdraw.
-        mapping(address => uint256) s_withdrawls;
-        mapping(address => mapping(address => uint256))  s_erc20Withdrawls;
+        mapping(address => uint256) withdrawals;
+        // charity address => ERC20 => amount
+        mapping(address => mapping(address => uint256))  erc20Withdrawals;
     }
 
     // keccak256(abi.encode(uint256(keccak256("io.climeta.voting")) - 1)) & ~bytes32(uint256(0xff));

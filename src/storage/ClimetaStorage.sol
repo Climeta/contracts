@@ -4,15 +4,26 @@ pragma solidity 0.8.25;
 struct ClimetaStorage {
     address climetaAddress;
     address delMundoAddress;
+    address delMundoWalletAddress;
     address delMundoTraitAddress;
     address rayWalletAddress;
     address raywardAddress;
-    address rayputationAddress;
+    address raycognitionAddress;
     address opsTreasuryAddress;
     address registryAddress;
     uint256 everyoneVoteReward;
-    // TODO how do we handle constants in a diamond? Consts file?
-    uint256 CLIMETA_PERCENTAGE;
+    address[] allowedTokens;
+    uint256 votingRoundReward;
+
+    // for each charity address, store all the amounts available  to withdraw
+    mapping(address => mapping(address => uint256)) erc20Withdrawls;
+    // for each Token, store all the individual donations
+    mapping(address => mapping(address => uint256)) erc20Donations;
+    mapping(address => uint256) tokenBalances;
+    // ETH send to projects
+    uint256 totalETHToProjects;
+    // list of charity addresses and their ETH balances
+    mapping(address => uint256) totalTokenToProjects;
 
     // Charities + Brands
     // Mapping to hold the beneficiary address and the data -

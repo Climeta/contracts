@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {DeployDelMundo} from "./DeployDelMundo.s.sol";
 import {DeployRayward} from "./DeployRayward.s.sol";
 import {DeployClimetaDiamond} from "./DeployClimetaDiamond.s.sol";
-import {DeployRayputation} from "./DeployRayputation.s.sol";
+import {DeployRaycognition} from "./DeployRaycognition.s.sol";
 import {DeployTokenBoundRegistry} from "./DeployTokenBoundRegistry.s.sol";
 import {DeployDiamondFacets} from "./DeployDiamondFacets.s.sol";
 import {IERC6551Registry} from "@tokenbound/erc6551/interfaces/IERC6551Registry.sol";
@@ -15,7 +15,7 @@ contract DeployAll is Script {
     address public admin;
     address public delMundoAddr;
     address public raywardAddr;
-    address public rayputationAddr;
+    address public raycognitionAddr;
     address public wallet;
     address public registryAddr;
     uint256 public chainId;
@@ -33,17 +33,18 @@ contract DeployAll is Script {
         admin = vm.envAddress("DEPLOYER_PUBLIC_KEY");
 
         vm.startBroadcast(deployerPrivateKey);
+
         DeployDelMundo delMundo = new DeployDelMundo();
         delMundoAddr = delMundo.deploy(admin);
         console.log("DELMUNDO_ADDRESS=", delMundoAddr);
 
         DeployRayward rayward = new DeployRayward();
-        raywardAddr = rayward.run(admin);
+        raywardAddr = rayward.deploy(admin);
         console.log("RAYWARD_ADDRESS=", raywardAddr);
 
-        DeployRayputation rayputation = new DeployRayputation();
-        rayputationAddr = rayputation.deploy(admin);
-        console.log("RAYPUTATION_ADDRESS=", rayputationAddr);
+        DeployRaycognition raycognition = new DeployRaycognition();
+        raycognitionAddr = raycognition.deploy(admin);
+        console.log("RAYCOGNITION_ADDRESS=", raycognitionAddr);
 
         DeployRayWallet deployWallet = new DeployRayWallet();
         wallet = deployWallet.run();
@@ -54,7 +55,7 @@ contract DeployAll is Script {
         console.log("REGISTRY_ADDRESS=", registryAddr);
         chainId = vm.envUint("CHAINID");
         rayWallet = IERC6551Registry(registryAddr).account(wallet, 0, chainId, delMundoAddr, 0);
-        console.log("RAY_WALLET_ADDRESS=", rayWallet);
+        console.log("RAYWALLET_ADDRESS=", rayWallet);
 
         DeployDiamondFacets coreFacets = new DeployDiamondFacets();
         (diamondcut, diamondLoupe, ownership) = coreFacets.run();

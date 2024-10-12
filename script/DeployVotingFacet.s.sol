@@ -30,7 +30,9 @@ contract DeployVotingFacet is Script, DiamondHelper {
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
-        climeta.diamondCut(cut, address(0), "0x");
+        bytes memory data = abi.encodeWithSignature("init()");
+
+        climeta.diamondCut(cut, address(votingFacet), data);
         vm.stopBroadcast();
     }
 }

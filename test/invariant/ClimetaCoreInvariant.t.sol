@@ -37,7 +37,7 @@ contract ClimetaCoreInvariant is Test {
         rayWallet = RayWallet(payable(rayWalletDeployer.run()));
 
         DeployRayward raywardDeployer = new DeployRayward();
-        rayward = Rayward(payable(raywardDeployer.run(admin)));
+        rayward = Rayward(payable(raywardDeployer.deploy(admin)));
 
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
         delMundo = DelMundo(delMundoDeployer.deploy(admin));

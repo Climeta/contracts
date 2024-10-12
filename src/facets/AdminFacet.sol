@@ -30,18 +30,35 @@ contract AdminFacet is IAdmin {
     function getDelMundoTraitAddress() external returns(address)  {
         return s.delMundoTraitAddress;
     }
+    /// @notice gets the DelMundoTraits contract address.
+    function getDelMundoWalletAddress() external returns(address)  {
+        return s.delMundoWalletAddress;
+    }
     /// @notice gets the Rayward contract address.
     function getRaywardAddress() external returns(address)  {
         return s.raywardAddress;
     }
-    /// @notice gets the Rayputation contract address.
-    function getRayputationAddress() external returns(address)  {
-        return s.rayputationAddress;
+    /// @notice gets the Raycognition contract address.
+    function getRaycognitionAddress() external returns(address)  {
+        return s.raycognitionAddress;
     }
      /// @notice gets the ERC6551 Registry address.
     function getRegistryAddress() external returns(address)  {
         return s.registryAddress;
     }
+
+    /// @notice gets the amount of raywards given for the voting round.
+    function getVotingRoundReward() external returns(uint256)  {
+        return s.votingRoundReward;
+    }
+    /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
+    /// @param _rewardAmount The new reward amount
+    function setVotingRoundReward(uint256 _rewardAmount) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__VotingRewardChanged(_rewardAmount);
+        s.votingRoundReward = _rewardAmount;
+    }
+
 
     /////////////// SETTERS ////////////////////////////
 
@@ -53,6 +70,51 @@ contract AdminFacet is IAdmin {
     function updateOpsTreasuryAddress(address payable _ops) external {
         LibDiamond.enforceIsContractOwner();
         s.opsTreasuryAddress = _ops;
+    }
+
+    /// @notice Checks the ERC20 against list of allowed tokens
+    /// @param _token The token to check
+    function isAllowedToken(address _token) internal view returns(bool) {
+        uint256 length = s.allowedTokens.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (s.allowedTokens[i] == _token) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// @notice Adds an ERC20 to the list of allowed tokens
+    /// @param _token The allowed token to add
+    function addAllowedToken(address _token) external {
+        LibDiamond.enforceIsContractOwner();
+        if (!isAllowedToken(_token)) {
+            s.allowedTokens.push() = _token;
+            emit Climeta__TokenApproved(_token);
+        }
+    }
+
+    /// @notice Removes an ERC20 from the list of allowed tokens
+    /// Cannot remove if there is still value left in the treasury.
+    /// @param _token The allowed token to add
+    function removeAllowedToken(address _token) external {
+        LibDiamond.enforceIsContractOwner();
+        if (IERC20(_token).balanceOf(address(this)) > 0) {
+            revert Climeta__ValueStillInContract();
+        }
+
+        uint256 numberOfTokens = s.allowedTokens.length;
+        // remove from array of proposals for this voting round
+        for (uint256 i=0; i < numberOfTokens;i++) {
+            if (s.allowedTokens[i] == _token) {
+                for (uint256 j=i; j + 1 < numberOfTokens ; j++ ) {
+                    s.allowedTokens[j] = s.allowedTokens[j+1];
+                }
+                s.allowedTokens.pop();
+                emit Climeta__TokenRevoked(address(_token));
+                return;
+            }
+        }
     }
 
 

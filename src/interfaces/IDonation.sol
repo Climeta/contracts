@@ -21,7 +21,6 @@ interface IDonation {
     function setMinimumERC20Donation(address _address, uint256 _amount) external;
     function getMinimumEthDonation() external view returns(uint256);
     function setMinimumEthDonation(uint256 _amount) external;
-    function isAllowedToken(address _token) external view returns(bool);
     function donate() payable external;
     function donateToken(address _token, uint256 _amount) external;
 }

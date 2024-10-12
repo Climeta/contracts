@@ -60,7 +60,7 @@ contract DonationFacet is IDonation {
     */
     /// @notice Checks the ERC20 against list of allowed tokens
     /// @param _token The token to check
-    function isAllowedToken(address _token) external view returns(bool) {
+    function isAllowed(address _token) internal view returns(bool) {
         uint256 length = s.allowedTokens.length;
         for (uint256 i = 0; i < length; i++) {
             if (s.allowedTokens[i] == address(_token)) {
@@ -102,7 +102,7 @@ contract DonationFacet is IDonation {
     // @dev Pull some tokens from donator. They must have been pre-approved.
     function donateToken(address _token, uint256 _amount) external {
         // check if token is allowed
-        if (!isAllowedToken(_token)) {
+        if (!isAllowed(_token)) {
             revert Climeta__NotValueToken();
         }
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();

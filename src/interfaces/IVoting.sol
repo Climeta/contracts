@@ -58,8 +58,6 @@ interface IVoting {
     event Climeta__TokenRevoked(address _token);
 
     // Errors
-    error Climeta__CannotRemoveLastAdmin();
-    error Climeta__NotAdmin();
     error Climeta__NotRayWallet();
     error Climeta__NotAMember();
     error Climeta__NotApproved();
@@ -68,14 +66,16 @@ interface IVoting {
     error Climeta__ProposalNotInRound();
     error Climeta__AlreadyVoted();
     error Climeta__NoVotes();
-    error Climeta__NotFromAuthContract();
     error Climeta__NoFundsToWithdraw();
     error Climeta__ProposalHasVotes();
-    error Climeta__ValueStillInContract();
 
     function votingFacetVersion() external pure returns (string memory);
-    function setVotingRoundReward(uint256 _rewardAmount) external;
-    function getVotingRoundReward() external returns (uint256);
-    function addAllowedToken(address _token) external;
-    function removeAllowedToken(address _token) external;
+    function addProposal(address _beneficiary, string calldata _proposalURI) external returns(uint256);
+    function castVote(uint256 _propId) external;
+    function withdraw() external;
+    function updateProposalMetadata(uint256 _propId, string calldata _proposalURI) external;
+    function removeProposalFromVotingRound (uint256 _proposalId) external;
+    function addProposalToVotingRound (uint256 _proposalId) external;
+    function endVotingRound () external payable;
+    function pushPayment(address _beneficiary) external;
 }
