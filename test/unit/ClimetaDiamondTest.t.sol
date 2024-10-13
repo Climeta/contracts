@@ -18,9 +18,9 @@ contract ClimetaDiamondTest is Test {
     address payable ops;
     address admin;
 
-    uint256 constant VOTE_REWARD = 100000000000;            // 100 raywards
+    uint256 constant VOTE_REWARD = 100_000_000_000;            // 100 raywards
     uint256 constant VOTE_MULTIPLIER = 1;
-    uint256 constant REWARDPOOL_INITIAL = 10000000000000;   // 10000 raywards
+    uint256 constant REWARDPOOL_INITIAL = 10_000_000_000_000;   // 10,000 raywards
 
     function setUp() public {
 

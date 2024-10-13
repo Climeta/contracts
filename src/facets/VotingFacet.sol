@@ -319,13 +319,12 @@ contract VotingFacet is IVoting{
         Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, _to, _amount);
     }
 
-    // TODO need to check if this can run if there are 1000s of voters. May need to simply allocate to withdraw functions.
     function processRewards(uint256 _totalVotes) internal {
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
         RewardStorage.RewardStruct storage rs = RewardStorage.rewardStorage();
 
         uint256 m_votingRound = vs.votingRound;
-        uint256 voteCount = vs.votes[vs.votingRound].length;
+        uint256 voteCount = vs.votes[m_votingRound].length;
         uint256 totalCognition = 0;
         for (uint256 i = 0; i < voteCount; i++) {
             uint256 delmundoId = vs.votes[m_votingRound][i];
