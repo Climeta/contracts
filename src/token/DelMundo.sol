@@ -23,6 +23,11 @@ import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC
  */
 contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl, ERC721Royalty {
     event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
+    event DelMundo__MaxPerWalletUpdated(uint256 amount);
+    event DelMundo__MaxSupplyUpdated(uint256 amount);
+    event DelMundo__ContractURIUpdated(string uri);
+    event DelMundo__RoyaltyUpdated(address indexed recipient, uint96 value);
+    event DelMundo__Withdraw(address indexed recipient, uint256 value);
 
     error DelMundo__NotRay(address caller);
     error DelMundo__IncorrectSigner();
@@ -78,14 +83,16 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         _unpause();
     }
     function updateMaxSupply(uint256 newAmount) external onlyRay {
+        emit DelMundo__MaxSupplyUpdated(newAmount);
         s_currentMaxSupply = newAmount;
     }
     function updateMaxPerWalletAmount(uint256 newAmount) external onlyRay {
+        emit DelMundo__MaxPerWalletUpdated(newAmount);
         s_maxPerWalletAmount = newAmount;
     }
 
-
     function setDefaultRoyalites(address recipient, uint96 value) external onlyRay {
+        emit DelMundo__RoyaltyUpdated(recipient, value);
         _setDefaultRoyalty(recipient, value);
     }
 
@@ -104,6 +111,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     // ERC7572 metadata
     string private _contractURI;
     function setContractURI(string memory newURI) public onlyRay  {
+        emit DelMundo__ContractURIUpdated(newURI);
         _contractURI = newURI;
     }
 
@@ -170,9 +178,9 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
 
         s_isTokenMinted[voucher.tokenId] = true;
         // first assign the token to the signer, to establish provenance on-chain
+        emit DelMundo__Minted(voucher.tokenId, voucher.uri, msg.sender);
         _mint(signer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
-        emit DelMundo__Minted(voucher.tokenId, voucher.uri, msg.sender);
 
         // transfer the token to the redeemer
         _transfer(signer, msg.sender, voucher.tokenId);
@@ -191,9 +199,9 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
             revert DelMundo__SoldOut();
         }
         s_isTokenMinted[tokenId] = true;
+        emit DelMundo__Minted(tokenId, uri, to);
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
-        emit DelMundo__Minted(tokenId, uri, to);
     }
 
     function tokenURI(uint256 tokenId)
@@ -231,7 +239,9 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         if (account == address(0)) {
             revert DelMundo__NullAddressError();
         }
-        (bool success, ) = payable(account).call{value:address(this).balance}("");
+        uint256 amount = address(this).balance;
+        emit DelMundo__Withdraw(account, amount);
+        (bool success, ) = payable(account).call{value: amount}("");
         require(success,"Withdraw failed");
     }
 }

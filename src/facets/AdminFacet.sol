@@ -42,9 +42,13 @@ contract AdminFacet is IAdmin {
     function getRaycognitionAddress() external returns(address)  {
         return s.raycognitionAddress;
     }
-     /// @notice gets the ERC6551 Registry address.
+    /// @notice gets the ERC6551 Registry address.
     function getRegistryAddress() external returns(address)  {
         return s.registryAddress;
+    }
+    /// @notice gets the address of Ray Del Mundos Wallet (Reward Pool).
+    function getRayWalletAddress() external returns(address)  {
+        return s.rayWalletAddress;
     }
 
     /// @notice gets the amount of raywards given for the voting round.
@@ -58,6 +62,31 @@ contract AdminFacet is IAdmin {
         emit Climeta__VotingRewardChanged(_rewardAmount);
         s.votingRoundReward = _rewardAmount;
     }
+
+    /// @notice gets the amount of raywards given for a single vote.
+    function getVoteReward() external returns(uint256)  {
+        return s.voteReward;
+    }
+    /// @notice Sets the amount of raywards given for a single vote. Can only be called by Admins
+    /// @param _rewardAmount The new reward amount
+    function setVoteReward(uint256 _rewardAmount) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__VoteRewardChanged(_rewardAmount);
+        s.voteReward = _rewardAmount;
+    }
+
+    /// @notice gets the amount of raywards given for a single vote.
+    function getVoteRaycognition() external returns(uint256)  {
+        return s.voteRaycognitionAmount;
+    }
+    /// @notice Sets the amount of raywards given for a single vote. Can only be called by Admins
+    /// @param _rewardAmount The new reward amount
+    function setVoteRaycognition(uint256 _rewardAmount) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__VoteRaycognitionChanged(_rewardAmount);
+        s.voteRaycognitionAmount = _rewardAmount;
+    }
+
     /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
     /// @param _withdrawRewardOnly The new reward amount
     function setVotingRoundReward(bool _withdrawRewardOnly) external {
@@ -89,6 +118,11 @@ contract AdminFacet is IAdmin {
             }
         }
         return false;
+    }
+
+    /// @notice Get array of allowed tokens
+    function getAllowedTokens() external view returns(address[] memory) {
+        return s.allowedTokens;
     }
 
     /// @notice Adds an ERC20 to the list of allowed tokens

@@ -25,7 +25,7 @@ contract QueryClimeta is Script {
         uint256 reward = climetaAdmin.getVotingRoundReward();
         console.log("Reward for voting round :", reward);
         vm.startPrank(vm.envAddress("DEPLOYER_PUBLIC_KEY"));
-        climetaAdmin.setVotingRoundReward(100000);
+        climetaAdmin.setVotingRoundReward(100_000);
         vm.stopPrank();
         reward = climetaAdmin.getVotingRoundReward();
         console.log("Reward for voting round :", reward);

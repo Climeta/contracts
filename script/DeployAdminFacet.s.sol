@@ -32,9 +32,8 @@ contract DeployAdminFacet is Script, DiamondHelper {
 
         climeta.diamondCut(cut, address(0), "0x");
 
-
-
-
+        AdminFacet(address(climeta)).setVoteReward(600);
+        AdminFacet(address(climeta)).setVotingRoundReward(60_000);
         vm.stopBroadcast();
     }
 }

@@ -11,9 +11,11 @@ struct ClimetaStorage {
     address raycognitionAddress;
     address opsTreasuryAddress;
     address registryAddress;
-    uint256 everyoneVoteReward;
+    // Raycognisiton
+    uint256 voteRaycognitionAmount;
     address[] allowedTokens;
     uint256 votingRoundReward;
+    uint256 voteReward;
     bool withdrawRewardsOnly;
 
     // for each charity address, store all the amounts available  to withdraw

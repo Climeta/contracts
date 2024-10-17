@@ -38,6 +38,16 @@ contract VotingFacet is IVoting{
         return vs.votingRound;
     }
 
+    function getProposals(uint256 _round) external view returns(uint256[] memory) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return vs.votingRoundProposals[_round];
+    }
+
+    function getVotes(uint256 _proposalId) external view returns(uint256[] memory) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return vs.votes[_proposalId];
+    }
+
 
     // Allow the adding of proposals by the Admin group only
     /// @notice Adds a new beneficiary
@@ -124,6 +134,13 @@ contract VotingFacet is IVoting{
         }
     }
 
+    function grantRaycognition (uint256 _delmundoId, uint256 _amount) public {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__RaycognitionGranted(_delmundoId, _amount);
+        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, '0x', block.chainid, s.delMundoAddress, _delmundoId);
+        Raycognition(s.raycognitionAddress).mint(delmundoWallet, _amount);
+    }
+
     /**
     * @dev This is the core interaction in Climeta. The vote. We need to ensure that only members vote and that they can only vote once.
     * This function needs to be called by the wallet of the Del Mundo, not by the end user.
@@ -183,9 +200,11 @@ contract VotingFacet is IVoting{
         vs.votes[_propId].push(_tokenId);
         emit Climeta__Vote(_tokenId, _propId);
 
-        // Send Raywards
-        // could do a minimum now and the rest at end?
-        //Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, _caller, s.votingRoundReward);
+        grantRaycognition(_tokenId, s.voteRaycognitionAmount);
+
+        // Send standard raywards to woner of the DelMundo
+        address delmundoOwner = IRayWallet(payable(msg.sender)).owner();
+        Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, delmundoOwner, s.voteReward);
     }
 
     /**
@@ -319,6 +338,7 @@ contract VotingFacet is IVoting{
         Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, _to, _amount);
     }
 
+    // TODO Add events
     function processRewards(uint256 _totalVotes) internal {
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
         RewardStorage.RewardStruct storage rs = RewardStorage.rewardStorage();
@@ -326,6 +346,11 @@ contract VotingFacet is IVoting{
         uint256 m_votingRound = vs.votingRound;
         uint256 voteCount = vs.votes[m_votingRound].length;
         uint256 totalCognition = 0;
+
+        // Bonus Raywards left to distribute is the amount made available minus the standard given for voting
+        uint256 totalRaywardsToSplit = s.votingRoundReward - (s.votingRoundReward * voteCount);
+
+        // Get totals of voters and the raycognition scores
         for (uint256 i = 0; i < voteCount; i++) {
             uint256 delmundoId = vs.votes[m_votingRound][i];
             address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.rayWalletAddress, '0x',block.chainid, s.delMundoAddress, delmundoId);
@@ -339,12 +364,12 @@ contract VotingFacet is IVoting{
 
             // Formula for Raywards = 50% split across all voters and rest split by proportion of raycognition
             // If push of raywards fails - add to withdraw capability
-            uint256 rewardAmount = ((s.votingRoundReward / 2) / _totalVotes)  + ((s.votingRoundReward / 2) / (raycognition/totalCognition)  );
+            uint256 rewardAmount = ((totalRaywardsToSplit / 2) / _totalVotes)  + ((totalRaywardsToSplit / 2) / (raycognition/totalCognition)  );
             if (!s.withdrawRewardsOnly) {
                 try this.sendRaywards(delmundoOwner, rewardAmount) {
                 }
                 catch {
-
+                    rs.claimableRaywards[delmundoOwner] += rewardAmount;
                 }
             } else {
                 rs.claimableRaywards[delmundoOwner] += rewardAmount;

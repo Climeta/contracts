@@ -62,6 +62,11 @@ interface IVoting {
     /// @param _token The address of the ERC20 token removed
     event Climeta__TokenRevoked(address _token);
 
+    /// @notice Emitted when a reward is given out
+    /// @param _delmundoId The DelMundo being awarded
+    /// @param _amount The amount of the reward
+    event Climeta__RaycognitionGranted(uint256 _delmundoId, uint256 _amount);
+
     // Errors
     error Climeta__NotRayWallet();
     error Climeta__NotAMember();
@@ -74,10 +79,14 @@ interface IVoting {
     error Climeta__NoFundsToWithdraw();
     error Climeta__ProposalHasVotes();
 
+
     function votingFacetVersion() external pure returns (string memory);
     function addProposal(address _beneficiary, string calldata _proposalURI) external returns(uint256);
     function castVote(uint256 _propId) external;
     function withdraw() external;
+    function getProposals(uint256 _round) external returns(uint256[] memory);
+    function getVotes(uint256 _proposalId) external returns(uint256[] memory);
+    function getVotingRound() external view returns(uint256);
     function updateProposalMetadata(uint256 _propId, string calldata _proposalURI) external;
     function removeProposalFromVotingRound (uint256 _proposalId) external;
     function addProposalToVotingRound (uint256 _proposalId) external;

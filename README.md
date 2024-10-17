@@ -2,6 +2,10 @@
 
 ## Summary
 
+### Raycognition
+
+Raycognition is given out on each rewarded action via the grantRaycognition function. These are fixed for each action.
+
 
 
 ## Install

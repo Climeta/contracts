@@ -13,3 +13,6 @@
 [submodule "lib/creator-token-standards"]
 	path = lib/creator-token-standards
 	url = https://github.com/limitbreakinc/creator-token-standards
+[submodule "lib/openzeppelin-foundry-upgrades"]
+	path = lib/openzeppelin-foundry-upgrades
+	url = https://github.com/OpenZeppelin/openzeppelin-foundry-upgrades
