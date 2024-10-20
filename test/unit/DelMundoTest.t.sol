@@ -195,7 +195,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         vm.prank(address(raywallet1));
         vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
         delMundo.transferFrom(address(this), address(raywallet1), 1);
-
     }
 
     function testFuzz_RedeemOnTheCheap(uint256 prices) public {
@@ -412,5 +411,4 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.redeem{value: 1 ether}(cleanVoucher);
         vm.stopPrank();
     }
-
 }

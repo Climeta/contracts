@@ -34,5 +34,6 @@ contract QueryClimeta is Script {
         console.log("DelMundo Address stored :", delMundoAddr);
         address opsAddr = climetaAdmin.getOpsTreasuryAddress();
         console.log("Ops Address stored :", opsAddr);
+
     }
 }

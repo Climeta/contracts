@@ -46,8 +46,6 @@ contract ClimetaCoreInvariant is Test {
         registry = ERC6551Registry(registryDeployer.run());
 
         address raysWallet = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
-
-
         // Setup the handler and the functions to call
     }
 

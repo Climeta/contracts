@@ -52,7 +52,7 @@ contract RaycognitionTest is Test {
 
     function test_NameSymbol() public view {
         assertEq(raycognition.name(), "Raycognition");
-        assertEq(raycognition.symbol(), "RAYcognition");
+        assertEq(raycognition.symbol(), "RAYCOG");
     }
 
     function testFuzz_RevokeMinterAccessControl(address naughtyOne) public {
