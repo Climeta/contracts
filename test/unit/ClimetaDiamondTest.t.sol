@@ -15,6 +15,7 @@ import {IOwnership} from "../../src/interfaces/IOwnership.sol";
 import {IAdmin} from "../../src/interfaces/IAdmin.sol";
 import {IDonation} from "../../src/interfaces/IDonation.sol";
 import {IVoting} from "../../src/interfaces/IVoting.sol";
+import { LibDiamond } from "../../src/lib/LibDiamond.sol";
 
 contract ClimetaDiamondTest is Test {
     uint256 constant VOTING_REWARD = 600;
@@ -72,7 +73,7 @@ contract ClimetaDiamondTest is Test {
     }
 
 
-    function test_changeOwner() public {
+    function test_ChangeOwner() public {
         address newAdmin1 = makeAddr("new-admin1");
         address newAdmin2 = makeAddr("new-admin2");
         vm.expectRevert();
@@ -180,7 +181,6 @@ contract ClimetaDiamondTest is Test {
         emit IVoting.Climeta__NewProposal(beneficiary2, 2);
         uint256 proposalId2 = IVoting(climeta).addProposalByOwner(beneficiary2, "proposal-uri2");
 
-
         address bene;
         string memory uri;
         (bene, uri) = IVoting(climeta).getProposal(proposalId1);
@@ -220,57 +220,63 @@ contract ClimetaDiamondTest is Test {
         IVoting(climeta).updateProposalMetadata(proposalId2, "proposal1-uri2a");
     }
 
-//    function test_VotingRounds() public {
-//        uint256 votingRound = climetaCore.s_votingRound();
-//        assertEq(votingRound, 1);
-//
-//        address beneficiary1 = makeAddr("beneficiary1");
-//        climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
-//        climetaCore.addProposal(beneficiary1, "proposal1-uri");
-//
-//        address beneficiary2 = makeAddr("beneficiary2");
-//        climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
-//        climetaCore.addProposal(beneficiary2, "proposal1-uri");
-//
-//        // Test initial conditionals
-//        vm.prank(makeAddr("notAdmin"));
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.addProposalToVotingRound(1);
-//
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NoProposal.selector);
-//        climetaCore.addProposalToVotingRound(0);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NoProposal.selector);
-//        climetaCore.addProposalToVotingRound(3);
-//
-//        // Add the 2 in to current round
-//        vm.expectEmit();
-//        emit ClimetaCore__ProposalIncluded(1, 1);
-//        climetaCore.addProposalToVotingRound(1);
-//        vm.expectEmit();
-//        emit ClimetaCore__ProposalIncluded(1, 2);
-//        climetaCore.addProposalToVotingRound(2);
-//
-//        assertEq(climetaCore.getProposalsThisRound().length, 2);
-//        assertEq(climetaCore.getProposal(1).votingRound, 1);
-//        assertEq(climetaCore.getProposal(2).votingRound, 1);
-//
-//        // Remove tests
-//        vm.prank(makeAddr("notAdmin"));
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.removeProposalFromVotingRound(1);
-//
-//        vm.expectRevert(ClimetaCore.ClimetaCore__ProposalNotInRound.selector);
-//        climetaCore.removeProposalFromVotingRound(0);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__ProposalNotInRound.selector);
-//        climetaCore.removeProposalFromVotingRound(3);
-//
-//        vm.expectEmit();
-//        emit ClimetaCore__ProposalExcluded(1, 1);
-//        climetaCore.removeProposalFromVotingRound(1);
-//        assertEq(climetaCore.getProposalsThisRound().length, 1);
-//        assertEq(climetaCore.getProposal(1).votingRound, 0);
-//        assertEq(climetaCore.getProposal(2).votingRound, 1);
-//    }
+    function test_VotingRounds() public {
+        IVoting climetaCore = IVoting(climeta);
+        uint256 votingRound = climetaCore.getVotingRound();
+        assertEq(votingRound, 1);
+
+        address beneficiary1 = makeAddr("beneficiary1");
+        address beneficiary2 = makeAddr("beneficiary2");
+        vm.startPrank(admin);
+        climetaCore.approveBeneficiary(beneficiary1, true);
+        climetaCore.approveBeneficiary(beneficiary2, true);
+        uint256 prop1 = climetaCore.addProposalByOwner(beneficiary1, "proposal1-uri1");
+        uint256 prop2 = climetaCore.addProposalByOwner(beneficiary2, "proposal1-uri2");
+        vm.stopPrank();
+
+        // Test initial conditionals
+        vm.prank(makeAddr("notAdmin"));
+        vm.expectRevert(LibDiamond.Climeta__NotAdmin.selector);
+        climetaCore.addProposalToVotingRound(prop1);
+
+        vm.startPrank(admin);
+        vm.expectRevert(IVoting.Climeta__NoProposal.selector);
+        climetaCore.addProposalToVotingRound(prop1 - 1);
+        vm.expectRevert(IVoting.Climeta__NoProposal.selector);
+        climetaCore.addProposalToVotingRound(prop2 + 1);
+
+        // Add the 2 in to current round
+        vm.expectEmit();
+        emit IVoting.Climeta__ProposalIncluded(votingRound, prop1);
+        climetaCore.addProposalToVotingRound(prop1);
+        vm.expectEmit();
+        emit IVoting.Climeta__ProposalIncluded(votingRound, prop2);
+        climetaCore.addProposalToVotingRound(prop2);
+        vm.stopPrank();
+
+        assertEq(climetaCore.getProposals(votingRound).length, 2);
+
+        // Remove tests
+        vm.prank(makeAddr("notAdmin"));
+        vm.expectRevert(LibDiamond.Climeta__NotAdmin.selector);
+        climetaCore.removeProposalFromVotingRound(prop1);
+
+        vm.startPrank(admin);
+        vm.expectRevert(IVoting.Climeta__ProposalNotInRound.selector);
+        climetaCore.removeProposalFromVotingRound(prop1 - 1);
+        vm.expectRevert(IVoting.Climeta__ProposalNotInRound.selector);
+        climetaCore.removeProposalFromVotingRound(prop2 + 1);
+
+        vm.expectEmit();
+        emit IVoting.Climeta__ProposalExcluded(votingRound, prop1);
+        climetaCore.removeProposalFromVotingRound(prop1);
+        assertEq(climetaCore.getProposals(votingRound).length, 1);
+
+        vm.expectEmit();
+        emit IVoting.Climeta__ProposalExcluded(votingRound, prop2);
+        climetaCore.removeProposalFromVotingRound(prop2);
+        assertEq(climetaCore.getProposals(votingRound).length, 0);
+    }
 //
 //
 //    function testCastVote() public {

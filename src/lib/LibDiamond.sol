@@ -13,6 +13,8 @@ import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 error InitializationFunctionReverted(address _initializationContractAddress, bytes _calldata);
 
 library LibDiamond {
+    error Climeta__NotAdmin();
+
     /// @custom:storage-location erc7201:diamond.standard.diamond.storage
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256(abi.encode(uint256(keccak256("diamond.standard.diamond.storage")) - 1)) & ~bytes32(uint256(0xff));
 
@@ -63,7 +65,9 @@ library LibDiamond {
     }
 
     function enforceIsContractOwner() internal view {
-        require(msg.sender == diamondStorage().contractOwner, "LibDiamond: Must be contract owner");
+        if (msg.sender != diamondStorage().contractOwner) {
+            revert Climeta__NotAdmin();
+        }
     }
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
