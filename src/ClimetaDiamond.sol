@@ -22,7 +22,7 @@ struct DiamondArgs {
 }
 
 contract ClimetaDiamond is ERC1155Holder, ERC721Holder {
-    ClimetaStorage s;
+    ClimetaStorage internal s;
 
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
         LibDiamond.setContractOwner(_args.owner);

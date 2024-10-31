@@ -8,242 +8,218 @@ import "../../src/token/Rayward.sol";
 import "../../src/token/DelMundo.sol";
 import {DeployAll} from "../../script/DeployAll.s.sol";
 import {DeployClimetaDiamond} from "../../script/DeployClimetaDiamond.s.sol";
+import {DeployAdminFacet} from "../../script/DeployAdminFacet.s.sol";
+import {DeployDonationFacet} from "../../script/DeployDonationFacet.s.sol";
+import {DeployVotingFacet} from "../../script/DeployVotingFacet.s.sol";
+import {IOwnership} from "../../src/interfaces/IOwnership.sol";
+import {IAdmin} from "../../src/interfaces/IAdmin.sol";
+import {IDonation} from "../../src/interfaces/IDonation.sol";
+import {IVoting} from "../../src/interfaces/IVoting.sol";
 
 contract ClimetaDiamondTest is Test {
-
-    // Events
-
-
-    //    Authorization auth;
-    address payable ops;
-    address admin;
-
-    uint256 constant VOTE_REWARD = 100_000_000_000;            // 100 raywards
+    uint256 constant VOTING_REWARD = 600;
+    uint256 constant VOTE_RAYCOGNITION = 100;
+    uint256 constant VOTING_ROUND_REWARD = 60_000;
     uint256 constant VOTE_MULTIPLIER = 1;
     uint256 constant REWARDPOOL_INITIAL = 10_000_000_000_000;   // 10,000 raywards
 
-    function setUp() public {
+    //    Authorization auth;
+    address ops;
+    address admin;
+    address climeta;
 
+
+    function setUp() public {
         DeployAll preDeployer = new DeployAll();
         preDeployer.run();
         DeployClimetaDiamond climetaDeployer = new DeployClimetaDiamond();
+        climeta = climetaDeployer.run();
+        DeployAdminFacet adminDeployer = new DeployAdminFacet();
+        adminDeployer.run();
+        DeployDonationFacet donationDeployer = new DeployDonationFacet();
+        donationDeployer.run();
+        DeployVotingFacet votingDeployer = new DeployVotingFacet();
+        votingDeployer.run();
 
-
-
-
-//        address raysWallet = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
-
+        admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+        ops = IAdmin(climeta).getOpsTreasuryAddress();
+        vm.prank(admin);
+        IAdmin(climeta).setVoteRaycognition(VOTE_RAYCOGNITION);
     }
 
-//    function test_Version() public {
-//        assertEq(climetaCore.version(), "2.0");
-//    }
-//
-//    function test_VoteReward() public {
-//        assertEq(climetaCore.s_voteReward(), VOTE_REWARD);
-//    }
-//
-//    function test_AddAdmin() public {
-//        address newAdmin1 = makeAddr("new-admin1");
-//        address newAdmin2 = makeAddr("new-admin2");
-//        climetaCore.addAdmin(newAdmin1);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//        vm.prank(newAdmin1);
-//        climetaCore.addAdmin(newAdmin2);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin2));
-//    }
-//
-//    function test_RevokeAdmin() public {
-//        address newAdmin1 = makeAddr("new-admin1");
-//        address newAdmin2 = makeAddr("new-admin2");
-//        climetaCore.addAdmin(newAdmin1);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//        climetaCore.revokeAdmin(newAdmin1);
-//        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//
-//        climetaCore.addAdmin(newAdmin1);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//        // Test add admin again that its not "registered" twice
-//        climetaCore.addAdmin(newAdmin1);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//        climetaCore.revokeAdmin(newAdmin1);
-//        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//        climetaCore.addAdmin(newAdmin1);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin1));
-//
-//        // test revoke oneself works if there are others
-//        vm.prank(admin);
-//        climetaCore.revokeAdmin(admin);
-//        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), admin));
-//
-//        climetaCore.revokeAdmin(address(this));
-//
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.addAdmin(newAdmin2);
-//
-//        vm.prank(newAdmin1);
-//        climetaCore.addAdmin(newAdmin2);
-//        assert(climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin2));
-//
-//        vm.prank(newAdmin1);
-//        climetaCore.revokeAdmin(newAdmin2);
-//        assert(!climetaCore.hasRole(climetaCore.CUSTODIAN_ROLE(), newAdmin2));
-//
-//        // Test that you can't remove the last admin
-//        assertEq(climetaCore.getAdminCount(), 1);
-//
-//        vm.prank(newAdmin1);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__CannotRemoveLastAdmin.selector);
-//        climetaCore.revokeAdmin(newAdmin1);
-//
-//    }
-//
-//    function testFuzz_Donate(uint256 amount) public {
-//        deal(address(this), amount);
-//        uint256 initialBalance = address(this).balance;
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotFromAuthContract.selector);
-//        climetaCore.donate{value: amount}(address(this));
-//    }
-//
-//    function test_TransferReverts() public {
-//        deal(address(this), 2 ether);
-//        vm.expectRevert();
-//        address(climetaCore).call{value: 1 ether}("");
-//    }
-//
-//    function test_TransferSelfDestruct() public {
-//        AttackSelfDestructMe attacker = new AttackSelfDestructMe(climetaCore);
-//        deal(address(attacker), 2 ether);
-//
-//        attacker.attack();
-//        console.log("balance of climetaCore: ", address(climetaCore).balance);
-//    }
-//
-//    function test_IsAdmin() public {
-//        assertEq(climetaCore.isAdmin(address(this)), true);
-//        assertEq(climetaCore.isAdmin(makeAddr("Notadmnnin")), false);
-//    }
-//
-//    function test_AddBeneficiary() public {
-//        address beneficiary1 = makeAddr("beneficiary1");
-//        address beneficiary2 = makeAddr("beneficiary2");
-//        assertEq(climetaCore.isBeneficiary(beneficiary1), false);
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), false);
-//
-//        vm.expectRevert();
-//        climetaCore.addBeneficiary(beneficiary1, "", "beneficiary1-uri");
-//
-//        vm.expectEmit();
-//        emit ClimetaCore__NewBeneficiary(beneficiary1, "beneficiary1");
-//        climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
-//        assertEq(climetaCore.isBeneficiary(beneficiary1), true);
-//
-//        // Test that an update of a name to blank fails
-//        vm.expectRevert();
-//        climetaCore.addBeneficiary(beneficiary1, "", "beneficiary1-uri");
-//
-//        // Add second beneficiary
-//        vm.expectEmit();
-//        emit ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
-//        climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), true);
-//
-//        // Remove second beneficiary
-//        vm.expectEmit();
-//        emit ClimetaCore__RemovedBeneficiary(beneficiary2);
-//        climetaCore.removeBeneficiary(beneficiary2);
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), false);
-//
-//        // Remove second beneficiary again - should do nothing
-//        climetaCore.removeBeneficiary(beneficiary2);
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), false);
-//
-//        // Add second back in
-//        vm.expectEmit();
-//        emit ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
-//        climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), true);
-//
-//        // Remove both and add third time
-//        vm.expectEmit();
-//        emit ClimetaCore__RemovedBeneficiary(beneficiary1);
-//        climetaCore.removeBeneficiary(beneficiary1);
-//        assertEq(climetaCore.isBeneficiary(beneficiary1), false);
-//        vm.expectEmit();
-//        emit ClimetaCore__RemovedBeneficiary(beneficiary2);
-//        climetaCore.removeBeneficiary(beneficiary2);
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), false);
-//
-//        // Add both in again
-//        vm.expectEmit();
-//        emit ClimetaCore__NewBeneficiary(beneficiary1, "beneficiary1");
-//        climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
-//        assertEq(climetaCore.isBeneficiary(beneficiary1), true);
-//        vm.expectEmit();
-//        emit ClimetaCore__NewBeneficiary(beneficiary2, "beneficiary2");
-//        climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
-//        assertEq(climetaCore.isBeneficiary(beneficiary2), true);
-//    }
-//
-//    function test_AddUpdateProposal() public {
-//        // This should fail as there are no proposals
-//        vm.expectRevert();
-//        uint256 proposalId = climetaCore.s_proposalList(0);
-//
-//        assertEq(climetaCore.getAllProposals().length, 0);
-//
-//        address notBeneficiary = makeAddr("notBeneficiary");
-//        address beneficiary1 = makeAddr("beneficiary1");
-//        address beneficiary2 = makeAddr("beneficiary2");
-//        climetaCore.addBeneficiary(beneficiary1, "beneficiary1", "beneficiary1-uri");
-//        climetaCore.addBeneficiary(beneficiary2, "beneficiary2", "beneficiary2-uri");
-//
-//        // Test only admin can add
-//        vm.prank(notBeneficiary);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.addProposal(notBeneficiary, "proposal-uri");
-//
-//        vm.prank(beneficiary1);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.addProposal(notBeneficiary, "proposal-uri");
-//
-//        // test only approved beneficiaries can add proposals
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotApproved.selector);
-//        climetaCore.addProposal(notBeneficiary, "proposal-uri");
-//
-//        // Expect block timestamp 1 and proposal id 1 for first ever proposal
-//        vm.expectEmit();
-//        emit ClimetaCore__NewProposal(beneficiary1, 1);
-//        climetaCore.addProposal(beneficiary1, "proposal1-uri");
-//        assertEq(climetaCore.getProposal(1).beneficiaryAddress, beneficiary1);
-//        assertEq(climetaCore.getProposal(1).metadataURI, "proposal1-uri");
-//        assertEq(climetaCore.getAllProposals().length, 1);
-//
-//        // Test updates
-//        vm.prank(notBeneficiary);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.updateProposal(1, "proposal-uri");
-//        assertEq(climetaCore.getAllProposals().length, 1);
-//
-//        vm.prank(beneficiary1);
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NotAdmin.selector);
-//        climetaCore.updateProposal(1, "proposal-uri");
-//
-//        // test update of non existent proposal fails
-//        vm.expectRevert(ClimetaCore.ClimetaCore__NoProposal.selector);
-//        climetaCore.updateProposal(2, "proposal1-uri2");
-//
-//        climetaCore.updateProposal(1, "proposal1-uri2");
-//        assertEq(climetaCore.getProposal(1).metadataURI, "proposal1-uri2");
-//        climetaCore.updateProposal(1, "proposal1-uri3");
-//        assertEq(climetaCore.getProposal(1).metadataURI, "proposal1-uri3");
-//
-//        // Expect block timestamp 1 and proposal id 1 for first ever proposal
-//        climetaCore.addProposal(beneficiary2, "proposal1-uri");
-//        assertEq(climetaCore.getProposal(2).beneficiaryAddress, beneficiary2);
-//        assertEq(climetaCore.getAllProposals().length, 2);
-//    }
-//
+    function test_Version() public {
+        assertEq(IAdmin(climeta).adminFacetVersion(), "1.0");
+        assertEq(IDonation(climeta).donationFacetVersion(), "1.0");
+        assertEq(IVoting(climeta).votingFacetVersion(), "1.0");
+    }
+
+    function test_Statics() public {
+        uint256 reward = IAdmin(climeta).getVoteReward();
+        console.log("Reward ", reward);
+        assertEq(reward, VOTING_REWARD);
+        vm.prank(admin);
+        IAdmin(climeta).setVoteReward(VOTING_REWARD * 2);
+        assertEq(IAdmin(climeta).getVoteReward(), VOTING_REWARD * 2);
+
+        vm.prank(admin);
+        IAdmin(climeta).setVotingRoundReward(VOTING_ROUND_REWARD * 2);
+        assertEq(IAdmin(climeta).getVotingRoundReward(), VOTING_ROUND_REWARD * 2);
+
+        assertEq(IAdmin(climeta).getVoteRaycognition(), VOTE_RAYCOGNITION);
+        vm.prank(admin);
+        IAdmin(climeta).setVoteRaycognition(VOTE_RAYCOGNITION*2);
+        assertEq(IAdmin(climeta).getVoteRaycognition(), VOTE_RAYCOGNITION*2);
+    }
+
+
+    function test_changeOwner() public {
+        address newAdmin1 = makeAddr("new-admin1");
+        address newAdmin2 = makeAddr("new-admin2");
+        vm.expectRevert();
+        IOwnership(climeta).transferOwnership(newAdmin1);
+
+        vm.prank(admin);
+        IOwnership(climeta).transferOwnership(newAdmin1);
+        assertEq(IOwnership(climeta).owner(), newAdmin1);
+
+        vm.expectRevert();
+        IOwnership(climeta).transferOwnership(newAdmin2);
+
+        vm.prank(newAdmin1);
+        IOwnership(climeta).transferOwnership(newAdmin2);
+        assertEq(IOwnership(climeta).owner(), newAdmin2);
+    }
+
+
+    function test_TransferReverts() public {
+        deal(address(this), 2 ether);
+        vm.expectRevert();
+        climeta.call{value: 1 ether}("");
+    }
+
+    function test_AddBeneficiary() public {
+        address beneficiary1 = makeAddr("beneficiary1");
+        address beneficiary2 = makeAddr("beneficiary2");
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary1), false);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary2), false);
+
+        vm.expectRevert();
+        IVoting(climeta).approveBeneficiary(beneficiary1, true);
+
+        vm.expectEmit();
+        emit IVoting.Climeta__BeneficiaryApproval(beneficiary1, true);
+        vm.prank(admin);
+        IVoting(climeta).approveBeneficiary(beneficiary1, true);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary1), true);
+
+        // Add second beneficiary
+        vm.expectEmit();
+        emit IVoting.Climeta__BeneficiaryApproval(beneficiary2, true);
+        vm.prank(admin);
+        IVoting(climeta).approveBeneficiary(beneficiary2, true);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary2), true);
+
+        // Remove second beneficiary
+        vm.expectEmit();
+        emit IVoting.Climeta__BeneficiaryApproval(beneficiary2, false);
+        vm.prank(admin);
+        IVoting(climeta).approveBeneficiary(beneficiary2, false);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary2), false);
+
+        // Add second back in
+        vm.expectEmit();
+        emit IVoting.Climeta__BeneficiaryApproval(beneficiary2, true);
+        vm.prank(admin);
+        IVoting(climeta).approveBeneficiary(beneficiary2, true);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary2), true);
+
+        // Remove both and add third time
+        vm.startPrank(admin);
+        IVoting(climeta).approveBeneficiary(beneficiary1, false);
+        IVoting(climeta).approveBeneficiary(beneficiary2, false);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary1), false);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary2), false);
+
+        // Add both in again
+        IVoting(climeta).approveBeneficiary(beneficiary1, true);
+        IVoting(climeta).approveBeneficiary(beneficiary2, true);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary1), true);
+        assertEq(IVoting(climeta).isBeneficiary(beneficiary2), true);
+    }
+
+
+    function test_AddUpdateProposal() public {
+        assertEq(IVoting(climeta).getProposals(IVoting(climeta).getVotingRound()).length, 0);
+
+        address notBeneficiary = makeAddr("notBeneficiary");
+        address beneficiary1 = makeAddr("beneficiary1");
+        address beneficiary2 = makeAddr("beneficiary2");
+        vm.startPrank(admin);
+        IVoting(climeta).approveBeneficiary(beneficiary1, true);
+        IVoting(climeta).approveBeneficiary(beneficiary2, true);
+        vm.stopPrank();
+
+        // Test only admin can add
+        vm.prank(notBeneficiary);
+        vm.expectRevert();
+        IVoting(climeta).addProposalByOwner(beneficiary1, "proposal-uri");
+        vm.prank(beneficiary1);
+        vm.expectRevert();
+        IVoting(climeta).addProposalByOwner(beneficiary1, "proposal-uri");
+
+        vm.prank(notBeneficiary);
+        vm.expectRevert();
+        IVoting(climeta).addProposal("proposal-uri");
+
+        vm.prank(beneficiary1);
+        vm.expectEmit();
+        emit IVoting.Climeta__NewProposal(beneficiary1, 1);
+        uint256 proposalId1 = IVoting(climeta).addProposal("proposal-uri1");
+        vm.prank(admin);
+        vm.expectEmit();
+        emit IVoting.Climeta__NewProposal(beneficiary2, 2);
+        uint256 proposalId2 = IVoting(climeta).addProposalByOwner(beneficiary2, "proposal-uri2");
+
+
+        address bene;
+        string memory uri;
+        (bene, uri) = IVoting(climeta).getProposal(proposalId1);
+        assertEq(bene, beneficiary1);
+        assertEq(uri, "proposal-uri1");
+        (bene, uri) = IVoting(climeta).getProposal(proposalId2);
+        assertEq(bene, beneficiary2);
+        assertEq(uri, "proposal-uri2");
+
+        // Test updates
+        vm.prank(notBeneficiary);
+        vm.expectRevert(IVoting.Climeta__NotProposalOwner.selector);
+        IVoting(climeta).updateProposalMetadata(1, "proposal-uri1a");
+
+        vm.prank(beneficiary2);
+        vm.expectRevert(IVoting.Climeta__NotProposalOwner.selector);
+        IVoting(climeta).updateProposalMetadata(proposalId1, "proposal-uri1a");
+
+        vm.prank(beneficiary1);
+        IVoting(climeta).updateProposalMetadata(proposalId1, "proposal1-uri1a");
+        (bene, uri) = IVoting(climeta).getProposal(proposalId1);
+        assertEq(uri, "proposal1-uri1a");
+
+        vm.prank(beneficiary2);
+        IVoting(climeta).updateProposalMetadata(proposalId2, "proposal1-uri2a");
+        (bene, uri) = IVoting(climeta).getProposal(proposalId2);
+        assertEq(uri, "proposal1-uri2a");
+
+        // Add to voting round and ensure cant update any more
+        vm.prank(admin);
+        IVoting(climeta).addProposalToVotingRound(proposalId2);
+
+        assertEq( IVoting(climeta).getProposals( IVoting(climeta).getVotingRound() ).length, 1);
+
+        vm.prank(beneficiary2);
+        vm.expectRevert(IVoting.Climeta__AlreadyInRound.selector);
+        IVoting(climeta).updateProposalMetadata(proposalId2, "proposal1-uri2a");
+    }
+
 //    function test_VotingRounds() public {
 //        uint256 votingRound = climetaCore.s_votingRound();
 //        assertEq(votingRound, 1);

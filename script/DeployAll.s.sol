@@ -23,14 +23,21 @@ contract DeployAll is Script {
     address public diamondcut;
     address public diamondLoupe;
     address public ownership;
+    uint256 deployerPrivateKey;
 
     constructor(){
+        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
+        admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
     }
 
-    function run() external {
-        // 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 is admin and address [0] from anvil
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+    function deploy() external {
+        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         admin = vm.envAddress("DEPLOYER_PUBLIC_KEY");
+        run();
+    }
+
+    function run() public {
+        // 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 is admin and address [0] from anvil
 
         vm.startBroadcast(deployerPrivateKey);
 

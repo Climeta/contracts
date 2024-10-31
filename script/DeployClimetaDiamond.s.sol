@@ -7,14 +7,27 @@ import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {DiamondInit} from "../src/utils/DiamondInit.sol";
+import {Raycognition} from "../src/token/Raycognition.sol";
 import "../src/utils/DiamondHelper.sol";
 
 contract DeployClimetaDiamond is Script, DiamondHelper {
-    function run() external {
+    uint256 deployerPrivateKey;
+    address deployerAddress;
+
+    constructor(){
+        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
+        deployerAddress = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+    }
+
+    function deploy() external {
+        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
+        run();
+    }
+
+    function run() public returns (address) {
 
         //read env variables and choose EOA for transaction signing
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
         address _delMundoAddress = vm.envAddress("DELMUNDO_ADDRESS");
         address _raywardAddress = vm.envAddress("RAYWARD_ADDRESS");
         address _raycognitionAddress = vm.envAddress("RAYCOGNITION_ADDRESS");
@@ -66,7 +79,13 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
 
         // deploy diamond
         ClimetaDiamond diamond = new ClimetaDiamond(cut, _args);
+
+        // Add diamond address where it needs to be
+        // Raycognition has Climeta as a minter for granting raywards
+        Raycognition(_raycognitionAddress).grantMinter(address(diamond));
         console.log("CLIMETA_ADDRESS=", address(diamond));
         vm.stopBroadcast();
+
+        return (address(diamond));
     }
 }

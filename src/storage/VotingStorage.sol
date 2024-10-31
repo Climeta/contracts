@@ -14,6 +14,9 @@ library VotingStorage {
         mapping(uint256 => uint256[]) votingRoundProposals;
         mapping(uint256 => uint256) proposalVotingRound;
 
+        // Approved charity project addresses
+        mapping(address => bool) approvedCharity;
+
         // Votes
         // mapping to show who has already voted in each round. Voting round => Del Mundo => true/false
         mapping(uint256 => mapping(uint256 => bool)) votingRoundDelMundoVoters;

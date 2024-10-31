@@ -8,12 +8,25 @@ import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
 
 contract DeployAdminFacet is Script, DiamondHelper {
-    function run() external {
+    uint256 public constant VOTING_REWARD = 600;
+    uint256 public constant VOTING_ROUND_REWARD = 60_000;
 
+    uint256 deployerPrivateKey;
+    address deployerAddress;
+
+    constructor(){
+        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
+        deployerAddress = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+    }
+
+    function deploy() external {
+        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
+        run();
+    }
+
+    function run() public {
         //read env variables and choose EOA for transaction signing
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
-
         vm.startBroadcast(deployerPrivateKey);
 
         //deploy facets and init contract
@@ -32,8 +45,8 @@ contract DeployAdminFacet is Script, DiamondHelper {
 
         climeta.diamondCut(cut, address(0), "0x");
 
-        AdminFacet(address(climeta)).setVoteReward(600);
-        AdminFacet(address(climeta)).setVotingRoundReward(60_000);
+        AdminFacet(address(climeta)).setVoteReward(VOTING_REWARD);
+        AdminFacet(address(climeta)).setVotingRoundReward(VOTING_ROUND_REWARD);
         vm.stopBroadcast();
     }
 }

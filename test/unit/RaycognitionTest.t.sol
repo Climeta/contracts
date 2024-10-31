@@ -45,7 +45,7 @@ contract RaycognitionTest is Test {
     function testFuzz_GrantMinterAccessControl(address newMinter) public {
         vm.assume(newMinter != admin);
         vm.startPrank(newMinter);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, newMinter, raycognition.MINTER_ADMIN_ROLE()));
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, newMinter, raycognition.MINTER_ROLE()));
         raycognition.grantMinter(newMinter);
         vm.stopPrank();
     }
@@ -63,7 +63,7 @@ contract RaycognitionTest is Test {
         vm.stopPrank();
 
         vm.startPrank(naughtyOne);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, naughtyOne, raycognition.MINTER_ADMIN_ROLE()));
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, naughtyOne, raycognition.MINTER_ROLE()));
         raycognition.revokeMinter(newAdmin);
         vm.stopPrank();
     }

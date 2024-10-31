@@ -8,12 +8,21 @@ import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
 
 contract DeployVotingFacet is Script, DiamondHelper {
-    function run() external {
+    uint256 deployerPrivateKey;
+    address deployerAddress;
 
-        //read env variables and choose EOA for transaction signing
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
+    constructor(){
+        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
+        deployerAddress = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+    }
 
+    function deploy() external {
+        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
+        run();
+    }
+
+    function run() public {
         vm.startBroadcast(deployerPrivateKey);
 
         //deploy facets and init contract

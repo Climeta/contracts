@@ -31,9 +31,11 @@ contract DemoClimeta is Script {
         IVoting climetaVoting = IVoting(climetaAddress);
 
         vm.startBroadcast(owner);
-        uint256 propId = climetaVoting.addProposal(charity1Addr, "proposal1_uri");
+        climetaVoting.approveBeneficiary(charity1Addr, true);
+        climetaVoting.approveBeneficiary(charity2Addr, true);
+        uint256 propId = climetaVoting.addProposalByOwner(charity1Addr, "proposal1_uri");
         climetaVoting.addProposalToVotingRound(propId);
-        propId = climetaVoting.addProposal(charity2Addr, "proposal2_uri");
+        propId = climetaVoting.addProposalByOwner(charity2Addr, "proposal2_uri");
         climetaVoting.addProposalToVotingRound(propId);
         console.log("Proposal id added ", propId);
         vm.stopBroadcast();

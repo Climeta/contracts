@@ -45,14 +45,10 @@ interface IVoting {
     /// @param _proposalId The ID of the proposal being excluded
     event Climeta__ProposalExcluded(uint256 _votingRound, uint256 _proposalId);
 
-    /// @notice Emitted when a new beneficiary is added
+    /// @notice Emitted when a beneficiary's status is updated
     /// @param _beneficiary The address of the new beneficiary
-    /// @param name The name of the new beneficiary
-    event Climeta__NewBeneficiary(address _beneficiary, string name);
-
-    /// @notice Emitted when a beneficiary is removed
-    /// @param _beneficiary The address of the beneficiary being removed
-    event Climeta__RemovedBeneficiary(address _beneficiary);
+    /// @param _approved flag showing if the address is an approved beneficiary or not
+    event Climeta__BeneficiaryApproval(address _beneficiary, bool _approved);
 
     /// @notice Emitted when a token is approved for use as treasury token
     /// @param _token The address of the ERC20 token added
@@ -70,6 +66,7 @@ interface IVoting {
     // Errors
     error Climeta__NotRayWallet();
     error Climeta__NotAMember();
+    error Climeta__NotProposalOwner();
     error Climeta__NotApproved();
     error Climeta__NoProposal();
     error Climeta__AlreadyInRound();
@@ -79,14 +76,18 @@ interface IVoting {
     error Climeta__NoFundsToWithdraw();
     error Climeta__ProposalHasVotes();
 
-
+    function approveBeneficiary(address, bool) external;
+    function isBeneficiary(address) external view returns(bool);
     function votingFacetVersion() external pure returns (string memory);
-    function addProposal(address _beneficiary, string calldata _proposalURI) external returns(uint256);
+    function addProposalByOwner(address _beneficiary, string calldata _proposalURI) external returns(uint256);
+    function addProposal(string calldata _proposalURI) external returns(uint256);
+    function getProposal(uint256 _proposalId) external returns(address, string memory);
     function castVote(uint256 _propId) external;
     function withdraw() external;
     function getProposals(uint256 _round) external returns(uint256[] memory);
     function getVotes(uint256 _proposalId) external returns(uint256[] memory);
     function getVotingRound() external view returns(uint256);
+    function hasVoted(uint256) external view returns(bool);
     function updateProposalMetadata(uint256 _propId, string calldata _proposalURI) external;
     function removeProposalFromVotingRound (uint256 _proposalId) external;
     function addProposalToVotingRound (uint256 _proposalId) external;

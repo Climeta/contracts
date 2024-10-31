@@ -48,14 +48,31 @@ contract VotingFacet is IVoting{
         return vs.votes[_proposalId];
     }
 
+    /// @notice Adds a new beneficiary
+    /// @param _beneficiary The address of the new beneficiary
+    /// @param _approved Flag to determine if the beneficiary address can add proposals and can partake
+    function approveBeneficiary(address _beneficiary, bool _approved) external {
+        LibDiamond.enforceIsContractOwner();
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        vs.approvedCharity[_beneficiary] = _approved;
+        emit Climeta__BeneficiaryApproval(_beneficiary, _approved);
+    }
+
+    function isBeneficiary(address _beneficiary) external view returns(bool) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return vs.approvedCharity[_beneficiary];
+    }
 
     // Allow the adding of proposals by the Admin group only
     /// @notice Adds a new beneficiary
     /// @param _beneficiary The address of the new beneficiary
-    function addProposal(address _beneficiary, string calldata _proposalURI) external returns(uint256) {
+    /// @param _proposalURI URI for the proposal details
+    function addProposalByOwner(address _beneficiary, string calldata _proposalURI) external returns(uint256) {
         LibDiamond.enforceIsContractOwner();
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
-
+        if (!vs.approvedCharity[_beneficiary]) {
+            revert Climeta__NotApproved();
+        }
         emit Climeta__NewProposal(_beneficiary, vs.nextProposalId);
         vs.proposals[vs.nextProposalId] = _proposalURI;
         vs.proposalOwner[vs.nextProposalId] = _beneficiary;
@@ -63,12 +80,39 @@ contract VotingFacet is IVoting{
         return vs.nextProposalId - 1;
     }
 
+    // Allow the adding of proposals by the Admin group only
+    /// @notice Adds a new beneficiary
+    /// @param _proposalURI URI for the proposal details
+    function addProposal(string calldata _proposalURI) external returns(uint256) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        if (!vs.approvedCharity[msg.sender]) {
+            revert Climeta__NotApproved();
+        }
+        emit Climeta__NewProposal(msg.sender, vs.nextProposalId);
+        vs.proposals[vs.nextProposalId] = _proposalURI;
+        vs.proposalOwner[vs.nextProposalId] = msg.sender;
+        vs.nextProposalId++;
+        return vs.nextProposalId - 1;
+    }
+
+    function getProposal(uint256 _proposalId) external returns(address, string memory) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return (vs.proposalOwner[_proposalId], vs.proposals[_proposalId]);
+    }
+
     /// @notice Updates a proposal;
     /// @param _propId The proposal ID to update
     /// @param _proposalURI new URI of the proposal
     function updateProposalMetadata(uint256 _propId, string calldata _proposalURI) external {
-        LibDiamond.enforceIsContractOwner();
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        // Can't edit if not owner or admin
+        if (!(LibDiamond.contractOwner() == msg.sender || vs.proposalOwner[_propId] == msg.sender)) {
+            revert Climeta__NotProposalOwner();
+        }
+        // Can't edit details if already in voting round
+        if (vs.proposalVotingRound[_propId] > 0) {
+            revert Climeta__AlreadyInRound();
+        }
         vs.proposals[_propId] = _proposalURI;
     }
 
@@ -200,12 +244,21 @@ contract VotingFacet is IVoting{
         vs.votes[_propId].push(_tokenId);
         emit Climeta__Vote(_tokenId, _propId);
 
-        grantRaycognition(_tokenId, s.voteRaycognitionAmount);
+        // Grant raycognition
+        emit Climeta__RaycognitionGranted(_tokenId, s.voteRaycognitionAmount);
+        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, '0x', block.chainid, s.delMundoAddress, _tokenId);
+        Raycognition(s.raycognitionAddress).mint(delmundoWallet, s.voteRaycognitionAmount);
 
         // Send standard raywards to woner of the DelMundo
         address delmundoOwner = IRayWallet(payable(msg.sender)).owner();
         Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, delmundoOwner, s.voteReward);
     }
+
+    function hasVoted(uint256 _tokenId) external view returns(bool) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return vs.votingRoundDelMundoVoters[vs.votingRound][_tokenId];
+    }
+
 
     /**
     * @dev Allows beneficiaries to claim their funds
