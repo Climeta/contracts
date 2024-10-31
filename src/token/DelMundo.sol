@@ -38,7 +38,8 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     error DelMundo__NullAddressError();
     error DelMundo__CannotMoveToDelMundoWallet();
 
-    bytes32 public constant RAY_ROLE = keccak256("RAY_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     string public constant SIGNING_DOMAIN = "RayNFT-Voucher";
     string public constant SIGNING_VERSION = "1";
     bytes4 constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
@@ -59,22 +60,29 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     constructor(address _admin)
     ERC721("DelMundo", "DEL-MUNDO")
     EIP712(SIGNING_DOMAIN, SIGNING_VERSION) {
-        _grantRole(RAY_ROLE, _admin);
+        _grantRole(MINTER_ROLE, _admin);
+        _grantRole(ADMIN_ROLE, _admin);
     }
 
     modifier onlyRay () {
-        if (!hasRole(RAY_ROLE, msg.sender)) {
+        if (!hasRole(ADMIN_ROLE, msg.sender)) {
             revert DelMundo__NotRay(msg.sender);
         }
         _;
     }
 
     function addAdmin(address newAdmin) external onlyRay {
-        _grantRole(RAY_ROLE, newAdmin);
+        _grantRole(ADMIN_ROLE, newAdmin);
     }
     function revokeAdmin(address oldAdmin) external onlyRay {
         require (msg.sender != oldAdmin, "Can't revoke yourself");
-        _revokeRole(RAY_ROLE, oldAdmin);
+        _revokeRole(ADMIN_ROLE, oldAdmin);
+    }
+    function addMinter(address newMinter) external onlyRay {
+        _grantRole(MINTER_ROLE, newMinter);
+    }
+    function revokeMinter(address oldMinter) external onlyRay {
+        _revokeRole(MINTER_ROLE, oldMinter);
     }
     function pause() external onlyRay {
         _pause();
@@ -153,7 +161,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         // make sure that the signer is authorized to mint NFTs
-        if (!hasRole(RAY_ROLE, signer)) {
+        if (!hasRole(MINTER_ROLE, signer)) {
             revert DelMundo__IncorrectSigner();
         }
 

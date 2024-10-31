@@ -72,7 +72,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         address newAdmin = makeAddr("new-admin");
         address newerAdmin = makeAddr("newer-admin");
         delMundo.addAdmin(newAdmin);
-        assert(delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
+        assert(delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
         // test if new admin can add admins
         vm.prank(newAdmin);
         delMundo.addAdmin(newerAdmin);
@@ -81,9 +81,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function test_RevokeAdmin() public {
         address newAdmin = makeAddr("new-admin");
         delMundo.addAdmin(newAdmin);
-        assert(delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
+        assert(delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
         delMundo.revokeAdmin(newAdmin);
-        assert(!delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
+        assert(!delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
     }
 
     function test_CurrentMaxSupply() public view {
@@ -339,7 +339,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_WithdrawWithoutPermission() public {
-        delMundo.renounceRole(delMundo.RAY_ROLE(), address(this));
+        delMundo.renounceRole(delMundo.ADMIN_ROLE(), address(this));
         vm.expectRevert();
         delMundo.withdraw(payable(address(this)));
     }
