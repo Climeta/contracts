@@ -75,6 +75,7 @@ interface IVoting {
     error Climeta__NoVotes();
     error Climeta__NoFundsToWithdraw();
     error Climeta__ProposalHasVotes();
+    error Climeta__RaywardConfigError();
 
     function approveBeneficiary(address, bool) external;
     function isBeneficiary(address) external view returns(bool);

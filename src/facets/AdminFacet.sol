@@ -86,10 +86,9 @@ contract AdminFacet is IAdmin {
         emit Climeta__VoteRaycognitionChanged(_rewardAmount);
         s.voteRaycognitionAmount = _rewardAmount;
     }
-
     /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
     /// @param _withdrawRewardOnly The new reward amount
-    function setVotingRoundReward(bool _withdrawRewardOnly) external {
+    function setWithdrawalType(bool _withdrawRewardOnly) external {
         LibDiamond.enforceIsContractOwner();
         emit Climeta__RewardWithdrawalTypeChange(_withdrawRewardOnly);
         s.withdrawRewardsOnly = _withdrawRewardOnly;
@@ -145,7 +144,6 @@ contract AdminFacet is IAdmin {
         }
 
         uint256 numberOfTokens = s.allowedTokens.length;
-        // remove from array of proposals for this voting round
         for (uint256 i=0; i < numberOfTokens;i++) {
             if (s.allowedTokens[i] == _token) {
                 for (uint256 j=i; j + 1 < numberOfTokens ; j++ ) {

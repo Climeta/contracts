@@ -15,8 +15,10 @@ import {IVoting} from "../../src/interfaces/IVoting.sol";
 import { LibDiamond } from "../../src/lib/LibDiamond.sol";
 import {DelMundo} from "../../src/token/DelMundo.sol";
 import {Rayward} from "../../src/token/Rayward.sol";
+import {Raycognition} from "../../src/token/Raycognition.sol";
 import {ERC6551Registry} from "@tokenbound/erc6551/ERC6551Registry.sol";
 import {RayWallet} from "../../src/RayWallet.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract ClimetaDiamondTest is Test {
     uint256 constant VOTING_REWARD = 600;
@@ -33,12 +35,15 @@ contract ClimetaDiamondTest is Test {
     DelMundo delMundo;
     address raywardAddress;
     Rayward rayward;
+    address raycognitionAddress;
+    Raycognition raycognition;
     address registryAddress;
     ERC6551Registry registry;
     address rayWalletAddress;
     address delMundoWalletAddress;
     RayWallet rayWallet;
-
+    ERC20Mock stablecoin1;
+    ERC20Mock stablecoin2;
 
     function setUp() public {
         DeployAll preDeployer = new DeployAll();
@@ -64,12 +69,25 @@ contract ClimetaDiamondTest is Test {
         rayWalletAddress = vm.envAddress("RAYWALLET_ADDRESS");
         rayWallet = RayWallet(payable(rayWalletAddress));
 
+        raycognitionAddress = vm.envAddress("RAYCOGNITION_ADDRESS");
+        raycognition = Raycognition(raycognitionAddress);
+
         delMundoWalletAddress = vm.envAddress("DELMUNDOWALLET_ADDRESS");
 
         admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
         ops = IAdmin(climeta).getOpsTreasuryAddress();
         vm.prank(admin);
         IAdmin(climeta).setVoteRaycognition(VOTE_RAYCOGNITION);
+
+        stablecoin1 = new ERC20Mock();
+        stablecoin2 = new ERC20Mock();
+        vm.startPrank(admin);
+        IAdmin(climeta).addAllowedToken(address(stablecoin1));
+        IAdmin(climeta).addAllowedToken(address(stablecoin2));
+        IAdmin(climeta).setVoteReward(VOTING_REWARD);
+        IAdmin(climeta).setVotingRoundReward(VOTING_ROUND_REWARD);
+        IAdmin(climeta).setWithdrawalType(true);
+
     }
 
     function test_Version() public {
@@ -316,9 +334,23 @@ contract ClimetaDiamondTest is Test {
         address brand2;
     }
 
+    struct Proposals {
+        uint256 prop1;
+        bytes callVote1;
+        uint256 prop2;
+        bytes callVote2;
+        uint256 prop3;
+        bytes callVote3;
+        uint256 prop4;
+        bytes callVote4;
+        uint256 prop5;
+        bytes callVote5;
+    }
+
     function testCastVote() public {
         IVoting climetaCore = IVoting(climeta);
         Actors memory actor;
+        Proposals memory props;
         uint256 votingRound = climetaCore.getVotingRound();
         actor.beneficiary1 = makeAddr("beneficiary1");
         actor.beneficiary2 = makeAddr("beneficiary2");
@@ -331,24 +363,24 @@ contract ClimetaDiamondTest is Test {
         vm.startPrank(admin);
         climetaCore.approveBeneficiary(actor.beneficiary1, true);
         climetaCore.approveBeneficiary(actor.beneficiary2, true);
-        uint256 prop1 = climetaCore.addProposalByOwner(actor.beneficiary1, "proposal1-uri1");
-        uint256 prop2 = climetaCore.addProposalByOwner(actor.beneficiary2, "proposal1-uri2");
-        climetaCore.addProposalToVotingRound(prop1);
-        climetaCore.addProposalToVotingRound(prop2);
+        props.prop1 = climetaCore.addProposalByOwner(actor.beneficiary1, "proposal1-uri1");
+        props.prop2 = climetaCore.addProposalByOwner(actor.beneficiary2, "proposal1-uri2");
+        climetaCore.addProposalToVotingRound(props.prop1);
+        climetaCore.addProposalToVotingRound(props.prop2);
         vm.stopPrank();
 
         // Ensure non members can't vote
         vm.startPrank(actor.user1);
         vm.expectRevert(IVoting.Climeta__NotRayWallet.selector);
-        climetaCore.castVote(prop1);
+        climetaCore.castVote(props.prop1);
         vm.stopPrank();
 
         vm.startPrank(address(this));
         vm.expectRevert();
-        climetaCore.castVote(prop1);
+        climetaCore.castVote(props.prop1);
         vm.stopPrank();
-        assertEq(climetaCore.getVotes(prop1).length, 0);
-        assertEq(climetaCore.getVotes(prop2).length, 0);
+        assertEq(climetaCore.getVotes(props.prop1).length, 0);
+        assertEq(climetaCore.getVotes(props.prop2).length, 0);
 
         // Mint NFTs to members directly and create the erc6551 raywallets
         vm.startPrank(admin);
@@ -383,16 +415,35 @@ contract ClimetaDiamondTest is Test {
 
         // User creates the calldata to cast the vote for the proposal they want and then calls the NFT wallet they own and want to use to actually do the vote.
         abiFunc = "castVote(uint256)";
-        callData = abi.encodeWithSignature(abiFunc, 3);
+
+        // Test voting for non existent proposal
+        props.callVote1 = abi.encodeWithSignature(abiFunc, 0);
         vm.startPrank(actor.user1);
         vm.expectRevert();
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, callData);
+        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
 
-        callData = abi.encodeWithSignature(abiFunc, prop1);
+        console.log("Raycognitions minted before voting:", raycognition.totalSupply());
+
+        props.callVote1 = abi.encodeWithSignature(abiFunc, props.prop1);
+        props.callVote2 = abi.encodeWithSignature(abiFunc, props.prop2);
+
         vm.startPrank(actor.user1);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, callData);
+//        vm.expectEmit();
+//        emit IVoting.Climeta__RaycognitionGranted(1, IAdmin(climeta).getVoteRaycognition());
+        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
+
+        console.log("Raycognitions minted after voting:", raycognition.totalSupply());
+
+        console.log("Raycog balance climeta: ",raycognition.balanceOf(climeta));
+        console.log("Raycog balance account1: ",raycognition.balanceOf(actor.account1));
+        console.log("Raycog balance account2: ",raycognition.balanceOf(actor.account2));
+        console.log("Raycog balance account3: ",raycognition.balanceOf(actor.account3));
+        console.log("Raycog balance user1: ",raycognition.balanceOf(actor.user1));
+        console.log("Raycog balance user2: ",raycognition.balanceOf(actor.user2));
+        console.log("Raycog balance user3: ",raycognition.balanceOf(actor.user3));
+
 
         // Ensure the right NFT is marked as having voted.
         assertFalse(climetaCore.hasVoted(0));
@@ -401,46 +452,53 @@ contract ClimetaDiamondTest is Test {
         assertFalse(climetaCore.hasVoted(3));
         assertFalse(climetaCore.hasVoted(300));
 
-        assertEq(climetaCore.getVotes(prop1).length, 1);
-        assertEq(climetaCore.getVotes(prop2).length, 0);
+        assertEq(climetaCore.getVotes(props.prop1).length, 1);
+        assertEq(climetaCore.getVotes(props.prop2).length, 0);
 
         vm.startPrank(actor.user1);
         vm.expectRevert(IVoting.Climeta__AlreadyVoted.selector);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, callData);
-
+        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote2);
         vm.expectRevert(IVoting.Climeta__AlreadyVoted.selector);
-        bytes memory callData2 = abi.encodeWithSignature(abiFunc, prop2);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, callData2);
+        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
-
 
         // Now user2 votes via his NFT
         vm.startPrank(actor.user2);
         vm.expectEmit();
-        emit IVoting.Climeta__Vote(2, prop2);
-        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, callData2);
+        emit IVoting.Climeta__Vote(2, props.prop2);
+        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
         vm.stopPrank();
-        assertEq(climetaCore.getVotes(1).length, 1);
-        assertEq(climetaCore.getVotes(2).length, 1);
+
+        assertEq(climetaCore.getVotes(props.prop1).length, 1);
+        assertEq(climetaCore.getVotes(props.prop2).length, 1);
 
         vm.startPrank(actor.user3);
         vm.expectEmit();
-        emit IVoting.Climeta__Vote(3, 2);
-        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, callData2);
+        emit IVoting.Climeta__Vote(3, props.prop2);
+        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
         vm.stopPrank();
-        assertEq(climetaCore.getVotes(1).length, 1);
-        assertEq(climetaCore.getVotes(2).length, 2);
+        assertEq(climetaCore.getVotes(props.prop1).length, 1);
+        assertEq(climetaCore.getVotes(props.prop2).length, 2);
 
         assertEq(rayward.balanceOf(actor.account0), REWARDPOOL_INITIAL - (VOTING_REWARD*3));
         assertEq(rayward.balanceOf(actor.user1), VOTING_REWARD);
         assertEq(rayward.balanceOf(actor.user2), VOTING_REWARD);
         assertEq(rayward.balanceOf(actor.user3), VOTING_REWARD);
+
+        // Test Raycognition goes to DelMundo wallete not owner.
+        assertEq(raycognition.balanceOf(actor.user1), 0);
+        assertEq(raycognition.balanceOf(actor.user2), 0);
+        assertEq(raycognition.balanceOf(actor.user3), 0);
+        assertEq(raycognition.balanceOf(actor.account1), IAdmin(climeta).getVoteRaycognition());
+        assertEq(raycognition.balanceOf(actor.account2), IAdmin(climeta).getVoteRaycognition());
+        assertEq(raycognition.balanceOf(actor.account3), IAdmin(climeta).getVoteRaycognition());
     }
 
     function test_EndVotingRound() public {
         // Set up vote!
         IVoting climetaCore = IVoting(climeta);
         Actors memory actor;
+        Proposals memory props;
         uint256 votingRound = climetaCore.getVotingRound();
         actor.beneficiary1 = makeAddr("beneficiary1");
         actor.beneficiary2 = makeAddr("beneficiary2");
@@ -449,19 +507,34 @@ contract ClimetaDiamondTest is Test {
         actor.user1 = makeAddr("user1");
         actor.user2 = makeAddr("user2");
         actor.user3 = makeAddr("user3");
-        deal(actor.brand1, 10 ether);
-        deal(actor.brand2, 10 ether);
-
+        deal(actor.brand1, 100 ether);
+        deal(actor.brand2, 100 ether);
 
         // Set up vote!
         vm.startPrank(admin);
+        stablecoin1.mint(actor.brand1, 1_000_000);
+        stablecoin1.mint(actor.brand2, 1_000_000);
+        stablecoin2.mint(actor.brand1, 1_000_000);
+        stablecoin2.mint(actor.brand2, 1_000_000);
+
+
         climetaCore.approveBeneficiary(actor.beneficiary1, true);
         climetaCore.approveBeneficiary(actor.beneficiary2, true);
-        uint256 prop1 = climetaCore.addProposalByOwner(actor.beneficiary1, "proposal1-uri1");
-        uint256 prop2 = climetaCore.addProposalByOwner(actor.beneficiary2, "proposal1-uri2");
-        climetaCore.addProposalToVotingRound(prop1);
-        climetaCore.addProposalToVotingRound(prop2);
+        props.prop1 = climetaCore.addProposalByOwner(actor.beneficiary1, "proposal1-uri1");
+        props.prop2 = climetaCore.addProposalByOwner(actor.beneficiary2, "proposal1-uri2");
+        props.prop3 = climetaCore.addProposalByOwner(actor.beneficiary1, "proposal1-uri3");
+        props.prop4 = climetaCore.addProposalByOwner(actor.beneficiary2, "proposal1-uri4");
+        climetaCore.addProposalToVotingRound(props.prop1);
+        climetaCore.addProposalToVotingRound(props.prop2);
         vm.stopPrank();
+
+        // User creates the calldata to cast the vote for the proposal they want and then calls the NFT wallet they own and want to use to actually do the vote.
+        string memory abiFunc = "castVote(uint256)";
+        props.callVote1 = abi.encodeWithSignature(abiFunc, props.prop1);
+        props.callVote2 = abi.encodeWithSignature(abiFunc, props.prop2);
+        props.callVote3 = abi.encodeWithSignature(abiFunc, props.prop3);
+        props.callVote4 = abi.encodeWithSignature(abiFunc, props.prop4);
+
 
         // Mint NFTs to members directly and create the erc6551 raywallets
         vm.startPrank(admin);
@@ -477,61 +550,58 @@ contract ClimetaDiamondTest is Test {
         // mint some raywards to ray for rewards and then approve.
         rayward.mint(actor.account0, REWARDPOOL_INITIAL);
 
-        string memory abiFunc = "approve(address,uint256)";
+        abiFunc = "approve(address,uint256)";
         bytes memory callData = abi.encodeWithSignature(abiFunc, climeta, REWARDPOOL_INITIAL);
         RayWallet account0wallet = RayWallet(payable(actor.account0));
         account0wallet.executeCall(raywardAddress, 0, callData);
         vm.stopPrank();
 
-        // User creates the calldata to cast the vote for the proposal they want and then calls the NFT wallet they own and want to use to actually do the vote.
-        abiFunc = "castVote(uint256)";
-        bytes memory callVote1 = abi.encodeWithSignature(abiFunc, prop1);
-        bytes memory callVote2 = abi.encodeWithSignature(abiFunc, prop2);
-
-        vm.startPrank(actor.user1);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, callVote1);
-        vm.stopPrank();
-
-        vm.startPrank(actor.user2);
-        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, callVote2);
-        vm.stopPrank();
-        vm.startPrank(actor.user3);
-        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, callVote2);
-        vm.stopPrank();
-
+        // Get some donations
         vm.startPrank(actor.brand1);
-        climeta.call(abi.encodeWithSignature("donate()", climeta, 5 ether));
+        IDonation(climeta).donate{value: 5 ether}();
         vm.stopPrank();
         vm.startPrank(actor.brand2);
-        climeta.call(abi.encodeWithSignature("donate()", climeta, 10 ether));
+        IDonation(climeta).donate{value: 10 ether}();
         vm.stopPrank();
-
-        // test that donation amounts are correct
         assertEq(climeta.balance, 13.5 ether);
 
+        vm.prank(actor.user1);
+        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
+        vm.prank(actor.user2);
+        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
+        vm.prank(actor.user3);
+        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
+
+        console.log("Voting for round one ended");
+        ///////////////////////// VOTE 1 END /////////////////////////////////////
+        vm.prank(admin);
         climetaCore.endVotingRound();
+        console.log("Ended round 1");
 
         // test the voting round has been incremented
         assertEq(climetaCore.getVotingRound(), 2);
 
-        // balance should still be 15.5 ether as nothing has been pushed or withdrawn yet
+        // balance should still be 13.5 ether as nothing has been pushed or withdrawn yet (after 10% to ops)
         assertEq(climeta.balance, 13.5 ether);
 
-        // ensure only owner can get funds
-//        assertEq(climetaCore.getWithdrawAmount(beneficiary1),12825000000000000000);
-//        assertEq(climetaCore.getWithdrawAmount(beneficiary2),675000000000000000);
-//        assertEq(climetaCore.getWithdrawAmount(user1),0);
-
+        // test that a withdrawal with nothing to withdraw does nothing
         uint256 prev_balance = actor.user1.balance;
         vm.prank(actor.user1);
         climetaCore.withdraw();
         assertEq(actor.user1.balance, prev_balance);
 
+        // test that the beneficiary can withdraw all their funds.
         vm.startPrank(actor.beneficiary1);
         uint256 gas_start = gasleft();
         climetaCore.withdraw();
         uint256 gas_used = gas_start - gasleft();
-        assertEq(actor.beneficiary1.balance, 12825000000000000000-(gas_used*tx.gasprice));
+
+        // 13.5 total. 2 proposals. beneficiary1 (prop1) got 1/3 of the votes so should get half of 10% of 13.5 + 33% of the 90%
+        // 10% of 13.5 = 0.675
+        // 90% of 13.5 = 12.15
+        // 1/3 of 12.15 = 4.05
+        // Total should be 4.725
+        assertEq(actor.beneficiary1.balance, 4_725_000_000_000_000_000-(gas_used*tx.gasprice));
         vm.stopPrank();
 
         vm.startPrank(actor.beneficiary2);
@@ -539,23 +609,67 @@ contract ClimetaDiamondTest is Test {
         climetaCore.pushPayment(actor.beneficiary2);
         vm.stopPrank();
 
+        // test that we cna push the payments out to the charities if needed
         vm.prank(admin);
         climetaCore.pushPayment(actor.beneficiary2);
 
         // Test balance is 10% of total split between the two beneficiaries and then rest to #1
-        assertEq(actor.beneficiary2.balance, 675000000000000000);
+        // 13.5 total. 2 proposals. beneficiary2 (prop2) got 2/3 of the votes so should get half of 10% of 13.5 + 66% of the 90%
+        // 10% of 13.5 = 0.675
+        // 90% of 13.5 = 12.15
+        // 2/3 of 12.15 = 8.1
+        // Total should be 8.775
+        assertEq(actor.beneficiary2.balance, 8_775_000_000_000_000_000);
+
+        ///////////////////////// VOTE 2 START /////////////////////////////////////
+        // Need to test stablecoin donations as well as ETH ones
+        // Set up vote #2
+        vm.startPrank(admin);
+        climetaCore.addProposalToVotingRound(props.prop3);
+        climetaCore.addProposalToVotingRound(props.prop4);
+        vm.stopPrank();
+
+        vm.startPrank(actor.brand1);
+        IDonation(climeta).donate{value: 5 ether}();
+        stablecoin1.approve(climeta, 1_000);
+        IDonation(climeta).donateToken(address(stablecoin1), 1_000);
+        vm.stopPrank();
+
+        vm.startPrank(actor.brand2);
+        stablecoin2.approve(climeta, 100_000);
+        IDonation(climeta).donateToken(address(stablecoin2), 100_000);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        vm.expectRevert(IVoting.Climeta__NoVotes.selector);
+        climetaCore.endVotingRound();
+
+        console.log("Do the voting for round 2");
+
+        vm.prank(actor.user1);
+        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote4);
+        vm.prank(actor.user2);
+        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote4);
+        vm.prank(actor.user3);
+        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote4);
+
+        console.log("Voting complete");
+
+        vm.prank(admin);
+        climetaCore.endVotingRound();
+        console.log("Ended round 2");
+
+        // test the voting round has been incremented
+        assertEq(climetaCore.getVotingRound(), 3);
+
+        // balance should still be 15.5 ether as nothing has been pushed or withdrawn yet
+        assertEq(climeta.balance, 4.5 ether);
+        assertEq(stablecoin1.balanceOf(climeta), 900);
+        assertEq(stablecoin2.balanceOf(climeta), 90_000);
+
+
+
+
     }
 }
 
-//
-//contract AttackSelfDestructMe {
-//    ClimetaCore target;
-//
-//    constructor(ClimetaCore _target) payable {
-//        target = _target;
-//    }
-//
-//    function attack() external payable {
-//        selfdestruct(payable(address(target)));
-//    }
-//}

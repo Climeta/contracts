@@ -10,9 +10,13 @@ library VotingStorage {
         mapping(uint256 => string) proposals;
         mapping(uint256 => address) proposalOwner;
 
+        // Voting round data
         // List of the accepted proposals in each Voting round
         mapping(uint256 => uint256[]) votingRoundProposals;
+        // Proposal and the voting round it is in
         mapping(uint256 => uint256) proposalVotingRound;
+        // Voting round and the total raycognition used
+        mapping(uint256 => uint256) votingRoundRaycognition;
 
         // Approved charity project addresses
         mapping(address => bool) approvedCharity;

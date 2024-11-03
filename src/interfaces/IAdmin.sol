@@ -23,11 +23,11 @@ interface IAdmin {
     function getRayWalletAddress() external returns(address);
     function getRaycognitionAddress() external returns(address);
     function getRegistryAddress() external returns(address);
-    function setVotingRoundReward(uint256 _rewardAmount) external;
     function getVoteReward() external returns (uint256);
     function setVoteReward(uint256 _rewardAmount) external;
     function getVotingRoundReward() external returns (uint256);
+    function setVotingRoundReward(uint256) external;
     function getVoteRaycognition() external returns (uint256);
-    function setVoteRaycognition(uint256 _rewardAmount) external;
-
+    function setVoteRaycognition(uint256) external;
+    function setWithdrawalType(bool) external;
 }

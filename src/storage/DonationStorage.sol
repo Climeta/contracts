@@ -3,11 +3,6 @@ pragma solidity ^0.8.20;
 
 library DonationStorage {
 
-    struct Donation {
-        address benefactor;
-        uint256 amount;
-    }
-
     struct DonationStruct {
         uint256 minimumEthDonation;
         mapping(address => uint256) minimumERC20Donations;

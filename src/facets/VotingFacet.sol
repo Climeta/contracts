@@ -246,10 +246,13 @@ contract VotingFacet is IVoting{
 
         // Grant raycognition
         emit Climeta__RaycognitionGranted(_tokenId, s.voteRaycognitionAmount);
-        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, '0x', block.chainid, s.delMundoAddress, _tokenId);
+        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, 0, block.chainid, s.delMundoAddress, _tokenId);
+        // Grant new raycognition
         Raycognition(s.raycognitionAddress).mint(delmundoWallet, s.voteRaycognitionAmount);
+        // Add to cumulative total;
+        vs.votingRoundRaycognition[m_votingRound] += s.voteRaycognitionAmount;
 
-        // Send standard raywards to woner of the DelMundo
+        // Send standard voting raywards due to owner of the DelMundo
         address delmundoOwner = IRayWallet(payable(msg.sender)).owner();
         Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, delmundoOwner, s.voteReward);
     }
@@ -345,45 +348,60 @@ contract VotingFacet is IVoting{
         uint256 totalVotes = 0;
         uint256 m_votingRound = vs.votingRound;
         uint256[] memory propIds = vs.votingRoundProposals[m_votingRound];
-        uint256 propIdsLength = propIds.length;
 
         // find total number of votes for this round
-        for (uint256 i = 0; i < propIdsLength; i++) {
+        for (uint256 i = 0; i < propIds.length; i++) {
             totalVotes += vs.votes[propIds[i]].length;
         }
         if (totalVotes == 0) {
             revert Climeta__NoVotes();
         }
 
-        uint256 fundEthBalance = address(this).balance;
         // work out amount to send out to all according to EVERYONE_PERCENTAGE
-        uint256 ethToAll = (fundEthBalance * Constants.EVERYONE_PERCENTAGE) / (propIdsLength*100);
+        uint256 ethToAll = address(this).balance * Constants.EVERYONE_PERCENTAGE/100 / propIds.length;
+        uint256 amountToSplit = address(this).balance * (100-Constants.EVERYONE_PERCENTAGE)/100;
+
+        for (uint256 i = 0; i < propIds.length; i++) {
+            uint256 ethAmount = (amountToSplit * vs.votes[propIds[i]].length/totalVotes);
+            // Add to amount in case beneficiary has not withdrawn from previous rounds.
+            vs.withdrawals[vs.proposalOwner[propIds[i]]] += ethAmount + ethToAll;
+        }
+
+        processERC20s(totalVotes);
+        processRewards(totalVotes);
+        vs.votingRound++;
+    }
+
+    function processERC20s(uint256 _totalVotes) internal {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        uint256 m_votingRound = vs.votingRound;
+        uint256[] memory propIds = vs.votingRoundProposals[m_votingRound];
+        uint256 propIdsLength = propIds.length;
 
         uint256 approvedErc20Length = s.allowedTokens.length;
-        // Create an array of the amounts to go to each for each ERC20
-        uint256[] memory erc20ToAll;
+        // Create an array of the amounts to go to each charity for each ERC20
+        uint256[] memory erc20ToAll = new uint256[](approvedErc20Length);
         for (uint256 i = 0; i < approvedErc20Length; i++) {
-            erc20ToAll[i] = ( IERC20(s.allowedTokens[i]).balanceOf(address(this)) * Constants.EVERYONE_PERCENTAGE) / (propIdsLength*100);
+            erc20ToAll[i] =  IERC20(s.allowedTokens[i]).balanceOf(address(this)) * Constants.EVERYONE_PERCENTAGE/100 / propIdsLength;
         }
 
         // amount paid out is % of fund to each beneficiary
         // Total = amount everyone gets + remainder according to what % of the total vote this proposal received
+        // For each proposal
         for (uint256 i = 0; i < propIdsLength; i++) {
-            uint256 ethAmount;
-            unchecked {ethAmount = (fundEthBalance * (100-Constants.EVERYONE_PERCENTAGE) * vs.votes[propIds[i]].length/totalVotes)/100 + ethToAll;}
-            // Add to amount in case beneficiary has not withdrawn from previous rounds.
-            vs.withdrawals[vs.proposalOwner[propIds[i]]] += ethAmount;
-
+            // Process for each ERC20
             for (uint256 j = 0; j < approvedErc20Length; j++) {
-                uint256 erc20Amount;
-                unchecked {erc20Amount = (IERC20(s.allowedTokens[j]).balanceOf(address(this)) * (100-Constants.EVERYONE_PERCENTAGE) * vs.votes[propIds[i]].length/totalVotes)/100 + erc20ToAll[j];}
+                // If there is a balance, allocate it in withdrawals array
+                uint256 amountInContract = IERC20(s.allowedTokens[j]).balanceOf(address(this));
 
-                vs.erc20Withdrawals[vs.proposalOwner[propIds[i]]][s.allowedTokens[j]] += erc20Amount;
+                if (amountInContract > 0) {
+                    uint256 amountPerVote = amountInContract * ((100-Constants.EVERYONE_PERCENTAGE)/100) / _totalVotes;
+                    uint256 erc20Amount = (amountPerVote * vs.votes[propIds[i]].length) + erc20ToAll[j];
+                    vs.erc20Withdrawals[vs.proposalOwner[propIds[i]]][s.allowedTokens[j]] += erc20Amount;
+                }
+
             }
         }
-
-        processRewards(totalVotes);
-        vs.votingRound++;
     }
 
     function sendRaywards(address _to, uint256 _amount) external {
@@ -397,35 +415,46 @@ contract VotingFacet is IVoting{
         RewardStorage.RewardStruct storage rs = RewardStorage.rewardStorage();
 
         uint256 m_votingRound = vs.votingRound;
-        uint256 voteCount = vs.votes[m_votingRound].length;
-        uint256 totalCognition = 0;
+        uint256 totalCognition = vs.votingRoundRaycognition[m_votingRound];
 
         // Bonus Raywards left to distribute is the amount made available minus the standard given for voting
-        uint256 totalRaywardsToSplit = s.votingRoundReward - (s.votingRoundReward * voteCount);
-
-        // Get totals of voters and the raycognition scores
-        for (uint256 i = 0; i < voteCount; i++) {
-            uint256 delmundoId = vs.votes[m_votingRound][i];
-            address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.rayWalletAddress, '0x',block.chainid, s.delMundoAddress, delmundoId);
-            totalCognition += Raycognition(s.raycognitionAddress).balanceOf(delmundoWallet);
+        if (s.votingRoundReward < s.voteReward * _totalVotes) {
+            revert Climeta__RaywardConfigError();
         }
-        for (uint256 i = 0; i < voteCount; i++) {
-            uint256 delmundoId = vs.votes[m_votingRound][i];
-            address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.rayWalletAddress, '0x', block.chainid, s.delMundoAddress, delmundoId);
-            uint256 raycognition = Raycognition(s.raycognitionAddress).balanceOf(delmundoWallet);
-            address delmundoOwner = IRayWallet(payable(msg.sender)).owner();
+        uint256 totalRaywardsToSplit = s.votingRoundReward - (s.voteReward * _totalVotes);
 
-            // Formula for Raywards = 50% split across all voters and rest split by proportion of raycognition
-            // If push of raywards fails - add to withdraw capability
-            uint256 rewardAmount = ((totalRaywardsToSplit / 2) / _totalVotes)  + ((totalRaywardsToSplit / 2) / (raycognition/totalCognition)  );
-            if (!s.withdrawRewardsOnly) {
-                try this.sendRaywards(delmundoOwner, rewardAmount) {
+        // For each proposal in voting round, process the votes
+        uint256[] memory propIds = vs.votingRoundProposals[m_votingRound];
+
+        // Go through each proposal and then each of their votes.
+        for (uint256 i = 0; i < propIds.length; i++) {
+            uint256[] memory votingDelMundos = vs.votes[propIds[i]];
+            for (uint256 j = 0; j < votingDelMundos.length; j++) {
+                address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, 0, block.chainid, s.delMundoAddress, votingDelMundos[j]);
+                uint256 raycognition = Raycognition(s.raycognitionAddress).balanceOf(delmundoWallet);
+                address delmundoOwner = IRayWallet(payable(delmundoWallet)).owner();
+
+                // Formula for Raywards = 50% split across all voters and rest split by proportion of raycognition
+                uint256 rewards = 0;
+                if (totalCognition == 0) {
+                    rewards = totalRaywardsToSplit / _totalVotes;
+                } else {
+                    rewards = ((totalRaywardsToSplit / 2) / _totalVotes);
                 }
-                catch {
-                    rs.claimableRaywards[delmundoOwner] += rewardAmount;
+                uint256 raycogAmount = 0;
+                // Calc raycog bonus
+                if (totalCognition > 0 && raycognition > 0) {
+                    rewards += (totalRaywardsToSplit / 2) * (raycognition/totalCognition);
                 }
-            } else {
-                rs.claimableRaywards[delmundoOwner] += rewardAmount;
+                if (s.withdrawRewardsOnly) {
+                    rs.claimableRaywards[delmundoOwner] += rewards;
+                } else {
+                    try Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, delmundoOwner, rewards) {
+                    }
+                    catch {
+                        rs.claimableRaywards[delmundoOwner] += rewards;
+                    }
+                }
             }
         }
     }

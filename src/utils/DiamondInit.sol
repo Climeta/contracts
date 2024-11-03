@@ -44,7 +44,6 @@ contract DiamondInit {
         s.rayWalletAddress = _raywalletAddress;
         s.registryAddress =  _registryAddress;
         s.withdrawRewardsOnly = false;
-
         s.opsTreasuryAddress = _ops;
     }
 }

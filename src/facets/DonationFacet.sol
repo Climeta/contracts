@@ -23,7 +23,26 @@ contract DonationFacet is IDonation {
         return "1.0";
     }
 
-        function getMinimumERC20Donation(address _address) external view returns(uint256) {
+    function getTotalDonations() external view returns (uint256) {
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        return ds.totalDonatedAmount;
+    }
+
+    function getTotalTokenDonations(address _token) external view returns (uint256) {
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        return ds.totalTokenDonations[_token];
+    }
+
+    function getTokenDonations(address _donator, address _token) external view returns (uint256) {
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        return ds.erc20donations[_donator][_token];
+    }
+    function getDonations(address _donator) external view returns (uint256) {
+        DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        return ds.donations[_donator];
+    }
+
+    function getMinimumERC20Donation(address _address) external view returns(uint256) {
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
         return ds.minimumERC20Donations[_address];
     }
@@ -45,19 +64,6 @@ contract DonationFacet is IDonation {
         ds.minimumEthDonation = _amount;
     }
 
-    /**
-    * @dev ETH Donations should only come from approved sources
-    *
-    * The 90/10 split is done on approval.
-    *
-    * We accept that if someone self-destructs a contract, the funds will get wrapped up and distributed to the projects
-    * but it will not be registered as a formal donation, the funds will just get sent out anonymously and not tracked.
-    *
-    * Each donation is logged formally for tracking and transparency as a key component of fund flow. An event is emitted
-    * so these can be tracked off chain too, self-destruct aside.
-    *
-    * @param _benefactor The ID of the donator.
-    */
     /// @notice Checks the ERC20 against list of allowed tokens
     /// @param _token The token to check
     function isAllowed(address _token) internal view returns(bool) {

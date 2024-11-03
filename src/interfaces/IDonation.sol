@@ -23,4 +23,8 @@ interface IDonation {
     function setMinimumEthDonation(uint256 _amount) external;
     function donate() payable external;
     function donateToken(address _token, uint256 _amount) external;
+    function getTotalDonations() external view returns (uint256);
+    function getTotalTokenDonations(address _token) external view returns (uint256);
+    function getTokenDonations(address _donator, address _token) external view returns (uint256);
+    function getDonations(address _donator) external view returns (uint256);
 }
