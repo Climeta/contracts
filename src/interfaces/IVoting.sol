@@ -85,6 +85,7 @@ interface IVoting {
     function getProposal(uint256 _proposalId) external returns(address, string memory);
     function castVote(uint256 _propId) external;
     function withdraw() external;
+    function withdrawRaywards() external;
     function getProposals(uint256 _round) external returns(uint256[] memory);
     function getVotes(uint256 _proposalId) external returns(uint256[] memory);
     function getVotingRound() external view returns(uint256);

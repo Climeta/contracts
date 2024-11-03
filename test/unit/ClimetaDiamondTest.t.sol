@@ -86,7 +86,7 @@ contract ClimetaDiamondTest is Test {
         IAdmin(climeta).addAllowedToken(address(stablecoin2));
         IAdmin(climeta).setVoteReward(VOTING_REWARD);
         IAdmin(climeta).setVotingRoundReward(VOTING_ROUND_REWARD);
-        IAdmin(climeta).setWithdrawalType(true);
+        IAdmin(climeta).setWithdrawalType(false);
 
     }
 
@@ -650,14 +650,15 @@ contract ClimetaDiamondTest is Test {
         RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote4);
         vm.prank(actor.user2);
         RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote4);
-        vm.prank(actor.user3);
-        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote4);
 
         console.log("Voting complete");
 
-        vm.prank(admin);
+        vm.startPrank(admin);
+        // Set this round to be raywards withdraw only
+        IAdmin(climeta).setWithdrawalType(true);
         climetaCore.endVotingRound();
         console.log("Ended round 2");
+        vm.stopPrank();
 
         // test the voting round has been incremented
         assertEq(climetaCore.getVotingRound(), 3);
@@ -667,9 +668,20 @@ contract ClimetaDiamondTest is Test {
         assertEq(stablecoin1.balanceOf(climeta), 900);
         assertEq(stablecoin2.balanceOf(climeta), 90_000);
 
+        assertEq(rayward.balanceOf(actor.user1), 10_900);
+        vm.prank(actor.user1);
+        climetaCore.withdrawRaywards();
+        assertEq(rayward.balanceOf(actor.user1), 55_000);
 
+        assertEq(rayward.balanceOf(actor.user3), 10_300);
+        vm.prank(actor.user3);
+        climetaCore.withdrawRaywards();
+        assertEq(rayward.balanceOf(actor.user3), 10_300);
 
-
+        assertEq(rayward.balanceOf(actor.user2), 10_900);
+        vm.prank(actor.user2);
+        climetaCore.withdrawRaywards();
+        assertEq(rayward.balanceOf(actor.user2), 55_000);
     }
 }
 
