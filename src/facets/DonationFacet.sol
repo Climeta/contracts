@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import {ClimetaStorage} from "../storage/ClimetaStorage.sol";
 import {DonationStorage} from "../storage/DonationStorage.sol";
+import {VotingStorage} from "../storage/VotingStorage.sol";
 import {IDonation} from "../interfaces/IDonation.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {Constants} from "../lib/Constants.sol";
@@ -69,7 +70,7 @@ contract DonationFacet is IDonation {
     function isAllowed(address _token) internal view returns(bool) {
         uint256 length = s.allowedTokens.length;
         for (uint256 i = 0; i < length; i++) {
-            if (s.allowedTokens[i] == address(_token)) {
+            if (s.allowedTokens[i] == _token) {
                 return true;
             }
         }
@@ -89,6 +90,8 @@ contract DonationFacet is IDonation {
 
     function donate() payable external {
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+
         if (msg.value < ds.minimumEthDonation) {
             revert Climeta__DonationNotAboveThreshold();
         }
@@ -99,7 +102,7 @@ contract DonationFacet is IDonation {
         }
         ds.totalDonatedAmount += msg.value;
         ds.donations[msg.sender] += msg.value;
-
+        vs.roundDonations[vs.votingRound] += msg.value * (100-Constants.CLIMETA_PERCENTAGE )/ 100;
         // Send Climetas operations cut
         uint256 opsCut = msg.value * Constants.CLIMETA_PERCENTAGE / 100;
         s.opsTreasuryAddress.call{value: opsCut}("");
@@ -112,6 +115,7 @@ contract DonationFacet is IDonation {
             revert Climeta__NotValueToken();
         }
         DonationStorage.DonationStruct storage ds = DonationStorage.donationStorage();
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
         if (_amount < ds.minimumERC20Donations[_token]) {
             revert Climeta__DonationNotAboveThreshold();
         }
@@ -123,6 +127,7 @@ contract DonationFacet is IDonation {
         s.tokenBalances[_token] += _amount;
         ds.erc20donations[msg.sender][_token] += _amount;
         ds.totalTokenDonations[_token] += _amount;
+        vs.roundERC20Donations[vs.votingRound][_token] += _amount * (100-Constants.CLIMETA_PERCENTAGE)/100;
 
         uint256 opsAmount = (_amount * Constants.CLIMETA_PERCENTAGE) / 100;
         IERC20(_token).transfer(s.opsTreasuryAddress, opsAmount);

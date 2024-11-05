@@ -95,4 +95,6 @@ interface IVoting {
     function addProposalToVotingRound (uint256 _proposalId) external;
     function endVotingRound () external payable;
     function pushPayment(address _beneficiary) external;
+    function getWithdrawAmount(address , address ) external view returns(uint256);
+    function getTokenAmountForRound(address) external view returns(uint256);
 }
