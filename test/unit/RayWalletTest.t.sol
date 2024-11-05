@@ -35,7 +35,7 @@ contract RayWalletTest is Test, IERC721Receiver {
         rayWallet = RayWallet(payable(rayWalletDeployer.run()));
 
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.run(admin));
+        delMundo = DelMundo(delMundoDeployer.deploy(admin));
         address current = address(this);
         vm.prank(admin);
         delMundo.addAdmin(current);

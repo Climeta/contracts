@@ -46,13 +46,16 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function setUp() public {
         (admin, adminPk) = makeAddrAndKey("admin");
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.run(admin));
+        delMundo = DelMundo(delMundoDeployer.deploy(admin));
         address current = address(this);
 
         vm.prank(admin);
         delMundo.addAdmin(current);
 
         treasury = payable(makeAddr("treasury"));
+        vm.prank(admin);
+        delMundo.setDefaultRoyalites(treasury, 1000);
+
     }
 
     function test_publicVariables() public view {
@@ -69,7 +72,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         address newAdmin = makeAddr("new-admin");
         address newerAdmin = makeAddr("newer-admin");
         delMundo.addAdmin(newAdmin);
-        assert(delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
+        assert(delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
         // test if new admin can add admins
         vm.prank(newAdmin);
         delMundo.addAdmin(newerAdmin);
@@ -78,9 +81,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function test_RevokeAdmin() public {
         address newAdmin = makeAddr("new-admin");
         delMundo.addAdmin(newAdmin);
-        assert(delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
+        assert(delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
         delMundo.revokeAdmin(newAdmin);
-        assert(!delMundo.hasRole(delMundo.RAY_ROLE(), newAdmin));
+        assert(!delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
     }
 
     function test_CurrentMaxSupply() public view {
@@ -172,6 +175,13 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         assertEq(delMundo.ownerOf(1), userB);
     }
 
+    function test_getRoyalty() public {
+        delMundo.safeMint(address(this), 1, tokenUriToTest);
+        (address receiver, uint256 royalty) = delMundo.royaltyInfo(1, 10_000);
+        assertEq(receiver, treasury);
+        assertEq(royalty, 1_000);
+    }
+
     function test_transferToRayWallet() public {
         delMundo.safeMint(address(this), 1, tokenUriToTest);
         RayWallet raywallet1 = new RayWallet();
@@ -185,7 +195,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         vm.prank(address(raywallet1));
         vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
         delMundo.transferFrom(address(this), address(raywallet1), 1);
-
     }
 
     function testFuzz_RedeemOnTheCheap(uint256 prices) public {
@@ -201,7 +210,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         ));
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
-        bytes32 VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
@@ -230,7 +238,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         ));
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
-        bytes32 VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
@@ -332,7 +339,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_WithdrawWithoutPermission() public {
-        delMundo.renounceRole(delMundo.RAY_ROLE(), address(this));
+        delMundo.renounceRole(delMundo.ADMIN_ROLE(), address(this));
         vm.expectRevert();
         delMundo.withdraw(payable(address(this)));
     }
@@ -370,13 +377,38 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_Pause() public {
-        // creating a signed digest for testing
+        address user1 = makeAddr("user1");
+        vm.deal(user1, 10 ether);
+
+        bytes32 domainSeparatorHash = keccak256(abi.encode(
+            EIP712DOMAIN_TYPEHASH,
+            keccak256(bytes(SIGNING_DOMAIN)),
+            keccak256(bytes(SIGNATURE_VERSION)),
+            block.chainid,
+            address(delMundo)
+        ));
+
+        VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
+        bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
+        // this rsv combo is correct
+        bytes memory voucherSignature = abi.encodePacked(r,s,v);
+        DelMundo.NFTVoucher memory cleanVoucher = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
         delMundo.safeMint(address(this), 0, "uri-0");
         delMundo.pause();
         vm.expectRevert(Pausable.EnforcedPause.selector);
         delMundo.safeMint(address(this), 1, "uri-1");
-        delMundo.unpause();
-        delMundo.safeMint(address(this), 1, "uri-1");
-    }
+        vm.startPrank(user1);
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        delMundo.redeem{value: 1 ether}(cleanVoucher);
+        vm.stopPrank();
 
+        delMundo.unpause();
+        delMundo.safeMint(address(this), 2, "uri-2");
+        vm.startPrank(user1);
+        delMundo.redeem{value: 1 ether}(cleanVoucher);
+        vm.stopPrank();
+    }
 }

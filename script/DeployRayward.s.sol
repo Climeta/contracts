@@ -7,7 +7,13 @@ import {Rayward} from "../src/token/Rayward.sol";
 
 contract DeployRayward is Script {
 
-    function run(address _admin) external returns (address) {
+    function run() external returns (address) {
+        address admin = vm.envAddress("OWNER_PUBLIC_KEY");
+        Rayward rayward = new Rayward(admin);
+        return (address(rayward));
+    }
+
+    function deploy(address _admin) external returns (address) {
         Rayward rayward = new Rayward(_admin);
         return (address(rayward));
     }

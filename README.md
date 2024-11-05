@@ -2,6 +2,10 @@
 
 ## Summary
 
+### Raycognition
+
+Raycognition is given out on each rewarded action via the grantRaycognition function. These are fixed for each action.
+
 
 
 ## Install
@@ -56,3 +60,17 @@ sequenceDiagram
  * No DelMundo can vote more than once per voting round
  * Rayputation can only be earned, not traded
  * 
+
+
+## Deployments
+
+To deploy the contracts, run the following command:
+
+```bash
+forge deploy
+```
+
+
+
+When deploying a new version of a Facet, unless there are no functions added or removed, then you need to run a Remove of the old before 
+Adding a new one as the replace will simply replace each function in the array. 

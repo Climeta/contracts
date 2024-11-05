@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -266,7 +266,7 @@ contract ClimetaCore is Initializable, AccessControlEnumerableUpgradeable, Reent
     /// @param _delMundoId The tokenId of the del Mundo of the voter
     /// @return The multiplier for the voter
     function getVoterMultiplier (uint256 _delMundoId) internal view returns (uint256) {
-        // TODO need to include the Rayputation multiplier function
+        // TODO need to include the Raycognition multiplier function
         return 1;
     }
 

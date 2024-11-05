@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.25;
 
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {VmSafe} from "../../lib/forge-std/src/Vm.sol";
@@ -30,7 +30,7 @@ contract DelMundoInvariantTest is Test, IERC721Receiver {
     function setUp() public {
         (admin, adminPk) = makeAddrAndKey("admin");
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.run(admin));
+        delMundo = DelMundo(delMundoDeployer.deploy(admin));
 
         handler = new DelMundoHandler (delMundo);
         bytes4[] memory selectors = new bytes4[](1);

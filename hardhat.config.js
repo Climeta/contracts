@@ -5,8 +5,9 @@ require('dotenv').config();
 
 module.exports = {
   solidity: {
-    version: "0.8.20",
+    version: "0.8.25",
     settings: {
+      evmVersion: "cancun",
       optimizer: {
         enabled: !process.env.DEBUG,
         runs: 200,
@@ -14,8 +15,8 @@ module.exports = {
     }
   },
   networks: {
-    ganache: {
-      chainId: 1337,
+    anvil: {
+      chainId: 31337,
       url: "http://127.0.0.1:8545"
     },
   },
