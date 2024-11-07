@@ -19,6 +19,7 @@ import {Raycognition} from "../../src/token/Raycognition.sol";
 import {ERC6551Registry} from "@tokenbound/erc6551/ERC6551Registry.sol";
 import {RayWallet} from "../../src/RayWallet.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {VotesMockUpgradeable} from "../../lib/openzeppelin-contracts-upgradeable/contracts/mocks/VotesMockUpgradeable.sol";
 
 contract ClimetaDiamondTest is Test {
     uint256 constant VOTING_REWARD = 600;
@@ -434,8 +435,8 @@ contract ClimetaDiamondTest is Test {
         props.callVote2 = abi.encodeWithSignature(abiFunc, props.prop2);
 
         vm.startPrank(actor.user1);
-//        vm.expectEmit();
-//        emit IVoting.Climeta__RaycognitionGranted(1, IAdmin(climeta).getVoteRaycognition());
+        vm.expectEmit();
+        emit IVoting.Climeta__RaycognitionGranted(1, IAdmin(climeta).getVoteRaycognition());
         RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
 
@@ -500,6 +501,27 @@ contract ClimetaDiamondTest is Test {
     }
 
     function test_EndVotingRound() public {
+        ////////////// Voting test /////////////////
+//        Vote 1 : Bene1/Prop1 1 Vote
+//        Vote 1 : Bene2/Prop2 2 Vote
+//        Vote 1 : ETH: 13.5
+//        Voters: user1, user2, user3
+
+//        Vote 2 : Bene1/Prop3 0 Vote
+//        Vote 2 : Bene2/Prop4 2 Vote
+//        Vote 2 : ETH: 0
+//        Vote 2 : Stablecoin1 : 900
+//        Vote 2 : Stablecoin2 : 90_000
+//        Voters: user1, user2
+
+//        Vote 3 : Bene1/Prop5 2 Vote
+//        Vote 3 : Bene2/Prop6 0 Vote
+//        Vote 3 : Bene3/Prop7 1 Vote
+//        Vote 2 : ETH: 9
+//        Vote 2 : Stablecoin1 : 9_000
+//        Vote 2 : Stablecoin2 : 90_000
+//        Voters: user1, user2, user3
+
         // Set up vote!
         IVoting climetaCore = IVoting(climeta);
         Actors memory actor;
@@ -580,13 +602,17 @@ contract ClimetaDiamondTest is Test {
 
         vm.prank(actor.user1);
         RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
+        assertEq(Rayward(rayward).balanceOf(actor.user1), IAdmin(climeta).getVoteReward());
+
         vm.prank(actor.user2);
         RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
+        assertEq(Rayward(rayward).balanceOf(actor.user2), IAdmin(climeta).getVoteReward());
+
         vm.prank(actor.user3);
         RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
+        assertEq(Rayward(rayward).balanceOf(actor.user3), IAdmin(climeta).getVoteReward());
 
         console.log("Voting for round one ended");
-        ///////////////////////// VOTE 1 END /////////////////////////////////////
         vm.prank(admin);
         climetaCore.endVotingRound();
         console.log("Ended round 1");
@@ -601,6 +627,7 @@ contract ClimetaDiamondTest is Test {
         vm.prank(actor.user1);
         climetaCore.withdraw();
         assertEq(actor.user1.balance, prev_balance);
+
 
         // test that the beneficiary can withdraw all their funds.
         assertEq(actor.beneficiary1.balance, 0);
@@ -633,6 +660,15 @@ contract ClimetaDiamondTest is Test {
         // 2/3 of 12.15 = 8.1
         // Total should be 8.775
         assertEq(actor.beneficiary2.balance, 8_775_000_000_000_000_000);
+
+        // Test the Raywards withdrawal works and that the other voters get the right amount after a rollover.
+        // Amount is total allocated, minus all the individual vote rewards, divided by 2. First half split amongst all voters, second half split according to the relative raycognition scores of the voting delmundos.
+        // Amount for each DelMundo without Raycog = (Total Available - (number of voters * votereward) ) / 2 / Total voted
+        // Amount for each DelMundo with Raycog = (Total Available - (number of voters * votereward) ) / 2
+        uint256 amountExpected = 0;
+        vm.prank(actor.user1);
+        climetaCore.withdrawRaywards();
+//        assertEq(Rayward(rayward).balanceOf(actor.user1), IAdmin(climeta).getVoteReward() +     )
 
         ///////////////////////// VOTE 2 START /////////////////////////////////////
         // Need to test stablecoin donations as well as ETH ones
@@ -749,6 +785,27 @@ contract ClimetaDiamondTest is Test {
         vm.stopPrank();
 
         // Full withdrawals
+//        Vote 1 : Bene1/Prop1 1 Vote
+//        Vote 1 : Bene2/Prop2 2 Vote
+//        Vote 1 : ETH: 13.5
+//        Voters: user1, user2, user3
+
+//        Vote 2 : Bene1/Prop3 0 Vote
+//        Vote 2 : Bene2/Prop4 2 Vote
+//        Vote 2 : ETH: 0
+//        Vote 2 : Stablecoin1 : 900
+//        Vote 2 : Stablecoin2 : 90_000
+//        Voters: user1, user2
+
+//        Vote 3 : Bene1/Prop5 2 Vote
+//        Vote 3 : Bene2/Prop6 0 Vote
+//        Vote 3 : Bene3/Prop7 1 Vote
+//        Vote 2 : ETH: 9
+//        Vote 2 : Stablecoin1 : 9_000
+//        Vote 2 : Stablecoin2 : 90_000
+//        Voters: user1, user2, user3
+
+
 
         // For Raywards, each total should be
         vm.prank(actor.user1);
@@ -762,8 +819,6 @@ contract ClimetaDiamondTest is Test {
         vm.prank(actor.user3);
         climetaCore.withdrawRaywards();
         assertEq(rayward.balanceOf(actor.user3), 20_600);
-
-        Vote 1 : Bene1
 
         vm.prank(actor.beneficiary1);
         climetaCore.withdraw();

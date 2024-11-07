@@ -6,10 +6,10 @@
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
 [submodule "lib/tokenbound"]
 	path = lib/tokenbound
-	url = https://github.com/tokenbound/contracts
+	url = https://github.com/tokenbound/erc6551
 [submodule "lib/contracts"]
 	path = lib/contracts
-	url = https://github.com/@solidstate/contracts
+	url = https://github.com/tokenbound/contracts
 [submodule "lib/creator-token-standards"]
 	path = lib/creator-token-standards
 	url = https://github.com/limitbreakinc/creator-token-standards
