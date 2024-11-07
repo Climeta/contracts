@@ -32,6 +32,12 @@ library VotingStorage {
         mapping(address => uint256) withdrawals;
         // charity address => ERC20 => amount
         mapping(address => mapping(address => uint256))  erc20Withdrawals;
+
+        // voting round => ERC20 => amount
+        mapping(uint256 => mapping(address => uint256)) roundERC20Donations;
+        // voting round amount
+        mapping(uint256 => uint256) roundDonations;
+
     }
 
     // keccak256(abi.encode(uint256(keccak256("io.climeta.voting")) - 1)) & ~bytes32(uint256(0xff));

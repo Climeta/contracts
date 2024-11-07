@@ -262,6 +262,15 @@ contract VotingFacet is IVoting{
         return vs.votingRoundDelMundoVoters[vs.votingRound][_tokenId];
     }
 
+    function getWithdrawAmount(address _beneficiary, address _token) external view returns(uint256) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return vs.erc20Withdrawals[_beneficiary][_token];
+    }
+
+    function getTokenAmountForRound(address _token) external view returns(uint256) {
+        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
+        return vs.roundERC20Donations[vs.votingRound][_token];
+    }
 
     /**
     * @dev Allows beneficiaries to claim their funds
@@ -271,8 +280,7 @@ contract VotingFacet is IVoting{
     function withdraw() external {
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
         //ERC20 withdrawals
-        uint256 approvedErc20Length = s.allowedTokens.length;
-        for (uint256 i=0; i < approvedErc20Length; i++ ) {
+        for (uint256 i=0; i < s.allowedTokens.length; i++ ) {
             uint256 amount = vs.erc20Withdrawals[msg.sender][s.allowedTokens[i]];
             if (amount > 0) {
                 vs.erc20Withdrawals[msg.sender][s.allowedTokens[i]] = 0;
@@ -358,8 +366,8 @@ contract VotingFacet is IVoting{
         }
 
         // work out amount to send out to all according to EVERYONE_PERCENTAGE
-        uint256 ethToAll = address(this).balance * Constants.EVERYONE_PERCENTAGE/100 / propIds.length;
-        uint256 amountToSplit = address(this).balance * (100-Constants.EVERYONE_PERCENTAGE)/100;
+        uint256 ethToAll = vs.roundDonations[m_votingRound] * Constants.EVERYONE_PERCENTAGE/100 / propIds.length;
+        uint256 amountToSplit = vs.roundDonations[m_votingRound] * (100-Constants.EVERYONE_PERCENTAGE)/100;
 
         for (uint256 i = 0; i < propIds.length; i++) {
             uint256 ethAmount = (amountToSplit * vs.votes[propIds[i]].length/totalVotes);
@@ -367,41 +375,27 @@ contract VotingFacet is IVoting{
             vs.withdrawals[vs.proposalOwner[propIds[i]]] += ethAmount + ethToAll;
         }
 
-        processERC20s(totalVotes);
-        processRewards(totalVotes);
-        vs.votingRound++;
-    }
-
-    function processERC20s(uint256 _totalVotes) internal {
-        VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
-        uint256 m_votingRound = vs.votingRound;
-        uint256[] memory propIds = vs.votingRoundProposals[m_votingRound];
-        uint256 propIdsLength = propIds.length;
-
-        uint256 approvedErc20Length = s.allowedTokens.length;
-        // Create an array of the amounts to go to each charity for each ERC20
-        uint256[] memory erc20ToAll = new uint256[](approvedErc20Length);
-        for (uint256 i = 0; i < approvedErc20Length; i++) {
-            erc20ToAll[i] =  IERC20(s.allowedTokens[i]).balanceOf(address(this)) * Constants.EVERYONE_PERCENTAGE/100 / propIdsLength;
+        uint256 erc20count = s.allowedTokens.length;
+        uint256[] memory erc20ToAll = new uint256[](erc20count);
+        for (uint256 i = 0; i < erc20count; i++) {
+            erc20ToAll[i] =  vs.roundERC20Donations[m_votingRound][s.allowedTokens[i]] * Constants.EVERYONE_PERCENTAGE/100 / propIds.length;
         }
-
-        // amount paid out is % of fund to each beneficiary
-        // Total = amount everyone gets + remainder according to what % of the total vote this proposal received
-        // For each proposal
-        for (uint256 i = 0; i < propIdsLength; i++) {
+        for (uint256 i = 0; i < propIds.length; i++) {
             // Process for each ERC20
-            for (uint256 j = 0; j < approvedErc20Length; j++) {
+            for (uint256 j = 0; j < erc20count; j++) {
                 // If there is a balance, allocate it in withdrawals array
-                uint256 amountInContract = IERC20(s.allowedTokens[j]).balanceOf(address(this));
+                uint256 amountAvailable = vs.roundERC20Donations[m_votingRound][s.allowedTokens[j]] * (100-Constants.EVERYONE_PERCENTAGE)/100;
 
-                if (amountInContract > 0) {
-                    uint256 amountPerVote = amountInContract * ((100-Constants.EVERYONE_PERCENTAGE)/100) / _totalVotes;
+                if (amountAvailable > 0) {
+                    uint256 amountPerVote = amountAvailable / totalVotes;
                     uint256 erc20Amount = (amountPerVote * vs.votes[propIds[i]].length) + erc20ToAll[j];
-                    vs.erc20Withdrawals[vs.proposalOwner[propIds[i]]][s.allowedTokens[j]] += erc20Amount;
+                    address beneficiary = vs.proposalOwner[propIds[i]];
+                    vs.erc20Withdrawals[beneficiary][s.allowedTokens[j]] += erc20Amount;
                 }
-
             }
         }
+        processRewards(totalVotes);
+        vs.votingRound++;
     }
 
     function sendRaywards(address _to, uint256 _amount) external {
