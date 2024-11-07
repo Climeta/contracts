@@ -40,7 +40,7 @@ The other Facets manage Donations, Voting, Boutique (amrketplace), Ownership alo
 The Diamond pattern was chosen for 2 main reasons. 
 
  * The first is to have a single address for all of Climeta, forever. This allows ENS names and other naming services to be used.
- * The second is that Climeta is designed to evolve with the community and to have functionality added on an ongoing basis and this upgrade pattern is significantly cleaner in the eyes of Ray and myself.
+ * The second is that Climeta is designed to evolve with the community and to have functionality added on an ongoing basis and this upgrade pattern is significantly cleaner in the eyes of Ray and myself than other upgradeable prcxy patterns
 
 ## Install
 
