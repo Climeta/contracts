@@ -717,20 +717,6 @@ contract ClimetaDiamondTest is Test {
         assertEq(actor.beneficiary1.balance, 4_950_000_000_000_000_000-(gas_used*tx.gasprice));
         vm.stopPrank();
 
-        // Charity withdrawals. Charity 2 doesn't - test a rollover.
-        vm.startPrank(actor.beneficiary2);
-        climetaCore.withdraw();
-        // Ensure that charity 1 get something - 5% in fact.
-        vm.stopPrank();
-
-        console.log("StableCoin2 after end vote2");
-        console.log("StableCoin2");
-        console.log("climeta : ", stablecoin2.balanceOf(address(climetaCore)));
-        console.log("beneficiary2 eth : ", actor.beneficiary2.balance);
-        console.log("beneficiary1 : ", stablecoin2.balanceOf(actor.beneficiary1));
-        console.log("beneficiary2 : ", stablecoin2.balanceOf(actor.beneficiary2));
-        console.log("beneficiary3 : ", stablecoin2.balanceOf(actor.beneficiary3));
-
         ///////////////////////// VOTE 3 START /////////////////////////////////////
         // Need to test stablecoin donations as well as ETH ones
         // Set up vote #2
@@ -758,62 +744,39 @@ contract ClimetaDiamondTest is Test {
         vm.prank(actor.user3);
         RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote7);
 
-//
-//        console.log("Raywards");
-//        console.log("user1 : ", rayward.balanceOf(actor.user1));
-//        console.log("user2 : ", rayward.balanceOf(actor.user2));
-//        console.log("user3 : ", rayward.balanceOf(actor.user3));
-//        console.log("ray : ", rayward.balanceOf(address(rayWallet)));
-//
-//        console.log("StableCoin1");
-//        console.log("climeta : ", stablecoin1.balanceOf(address(climetaCore)));
-//        console.log("beneficiary1 : ", stablecoin1.balanceOf(actor.beneficiary1));
-//        console.log("beneficiary2 : ", stablecoin1.balanceOf(actor.beneficiary2));
-//        console.log("beneficiary3 : ", stablecoin1.balanceOf(actor.beneficiary3));
-//
-//        console.log("StableCoin2 before end vote3");
-//        console.log("climeta : ", stablecoin2.balanceOf(address(climetaCore)));
-//        console.log("beneficiary1 : ", stablecoin2.balanceOf(actor.beneficiary1));
-//        console.log("beneficiary2 : ", stablecoin2.balanceOf(actor.beneficiary2));
-//        console.log("beneficiary3 : ", stablecoin2.balanceOf(actor.beneficiary3));
-
         vm.startPrank(admin);
         climetaCore.endVotingRound();
         vm.stopPrank();
 
-//        console.log("StableCoin2 after end vote3");
-//        console.log("StableCoin2");
-//        console.log("climeta : ", stablecoin2.balanceOf(address(climetaCore)));
-//        console.log("beneficiary1 : ", stablecoin2.balanceOf(actor.beneficiary1));
-//        console.log("beneficiary2 : ", stablecoin2.balanceOf(actor.beneficiary2));
-//        console.log("beneficiary3 : ", stablecoin2.balanceOf(actor.beneficiary3));
-
         // Full withdrawals
+
+        // For Raywards, each total should be
         vm.prank(actor.user1);
         climetaCore.withdrawRaywards();
+        assertEq(rayward.balanceOf(actor.user1), 94_400);
 
         vm.prank(actor.user2);
         climetaCore.withdrawRaywards();
+        assertEq(rayward.balanceOf(actor.user2), 94_400);
 
         vm.prank(actor.user3);
         climetaCore.withdrawRaywards();
+        assertEq(rayward.balanceOf(actor.user3), 20_600);
+
+        Vote 1 : Bene1
 
         vm.prank(actor.beneficiary1);
         climetaCore.withdraw();
+        assertEq(actor.beneficiary1.balance ,10_650_000_000_000_000_000);
 
         vm.prank(actor.beneficiary2);
         climetaCore.withdraw();
+        assertEq(actor.beneficiary2.balance ,13_350_000_000_000_000_000);
 
         vm.prank(actor.beneficiary3);
         climetaCore.withdraw();
+        assertEq(actor.beneficiary3.balance ,3_000_000_000_000_000_000);
 
-//        console.log("  ");
-//        console.log("StableCoin2 after withdrawals");
-//        console.log("  ");
-//        console.log("climeta : ", stablecoin2.balanceOf(address(climetaCore)));
-//        console.log("beneficiary1 : ", stablecoin2.balanceOf(actor.beneficiary1));
-//        console.log("beneficiary2 : ", stablecoin2.balanceOf(actor.beneficiary2));
-//        console.log("beneficiary3 : ", stablecoin2.balanceOf(actor.beneficiary3));
     }
 }
 
