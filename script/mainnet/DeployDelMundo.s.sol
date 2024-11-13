@@ -11,15 +11,16 @@ contract DeployDelMundo is Script {
         uint256 deployPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployPublicKey = vm.envAddress("DEPLOYER_PUBLIC_KEY");
         address safeDEWallet = vm.envAddress("SAFE_DE_WALLET");
+        string memory rayIPFSuri = vm.envString("RAY_IPFS_METADATA");
         vm.startBroadcast(deployPrivateKey);
         DelMundo delMundo = new DelMundo(deployPublicKey);
         delMundo = DelMundo(address(delMundo));
         delMundo.addAdmin(admin);
-        delMundo.setDefaultRoyalites(safeDEWallet, 1_000);
+        delMundo.setDefaultRoyalties(safeDEWallet, 1_000);
 //        delMundo.revokeAdmin(deployPublicKey);
 
         // Mint Ray
-        delMundo.safeMint(admin, 0, "ipfs://QmPBtNF8xRxbcf1rSTAC57z2vDV5xma15KaobMbqpj8hhm");
+        delMundo.safeMint(admin, 0, rayIPFSuri);
 
         return (address(delMundo));
     }

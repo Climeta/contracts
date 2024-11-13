@@ -105,7 +105,8 @@ contract DonationFacet is IDonation {
         vs.roundDonations[vs.votingRound] += msg.value * (100-Constants.CLIMETA_PERCENTAGE )/ 100;
         // Send Climetas operations cut
         uint256 opsCut = msg.value * Constants.CLIMETA_PERCENTAGE / 100;
-        s.opsTreasuryAddress.call{value: opsCut}("");
+        (bool success, bytes memory data) = s.opsTreasuryAddress.call{value: opsCut}("");
+        require(success, "Climeta: OPS treasury transfer failed");
     }
 
     // @dev Pull some tokens from donator. They must have been pre-approved.

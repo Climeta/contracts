@@ -54,8 +54,8 @@ contract VotingFacet is IVoting{
     function approveBeneficiary(address _beneficiary, bool _approved) external {
         LibDiamond.enforceIsContractOwner();
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
-        vs.approvedCharity[_beneficiary] = _approved;
         emit Climeta__BeneficiaryApproval(_beneficiary, _approved);
+        vs.approvedCharity[_beneficiary] = _approved;
     }
 
     function isBeneficiary(address _beneficiary) external view returns(bool) {
@@ -178,10 +178,10 @@ contract VotingFacet is IVoting{
         }
     }
 
-    function grantRaycognition (uint256 _delmundoId, uint256 _amount) public {
+    function grantRaycognition (uint256 _delmundoId, uint256 _amount) external {
         LibDiamond.enforceIsContractOwner();
         emit Climeta__RaycognitionGranted(_delmundoId, _amount);
-        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, '0x', block.chainid, s.delMundoAddress, _delmundoId);
+        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, 0, block.chainid, s.delMundoAddress, _delmundoId);
         Raycognition(s.raycognitionAddress).mint(delmundoWallet, _amount);
     }
 
@@ -294,7 +294,8 @@ contract VotingFacet is IVoting{
         if (amountETH > 0) {
             vs.withdrawals[msg.sender] = 0;
             emit Climeta__Payout(msg.sender, amountETH);
-            payable(msg.sender).call{value: amountETH}("");
+            (bool success, bytes memory data) = payable(msg.sender).call{value: amountETH}("");
+            require(success, "ETH withdraw failed");
         }
     }
 
@@ -395,6 +396,7 @@ contract VotingFacet is IVoting{
             }
         }
         processRewards(totalVotes);
+        emit Climeta__VotingRoundEnded(m_votingRound);
         vs.votingRound++;
     }
 
@@ -428,7 +430,7 @@ contract VotingFacet is IVoting{
                 uint256 raycognition = Raycognition(s.raycognitionAddress).balanceOf(delmundoWallet);
                 address delmundoOwner = IRayWallet(payable(delmundoWallet)).owner();
 
-                // Formula for Raywards = 50% split across all voters and rest split by proportion of raycognition
+                // Formula for Raywards = 50% split across all voters and rest split by proportion of Raycognition
                 uint256 rewards = 0;
                 if (totalCognition == 0) {
                     rewards = totalRaywardsToSplit / _totalVotes;
@@ -459,7 +461,7 @@ contract VotingFacet is IVoting{
 
         if (amount > 0) {
             rs.claimableRaywards[msg.sender] = 0;
-            emit Climeta__RewardClaimed(msg.sender, amount);
+            emit Climeta__RaywardClaimed(msg.sender, amount);
             Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, msg.sender, amount);
         }
     }

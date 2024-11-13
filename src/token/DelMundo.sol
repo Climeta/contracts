@@ -22,34 +22,39 @@ import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC
  * @dev bugbounty contact mysaviour@climeta.io
  */
 contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl, ERC721Royalty {
-    event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
+
+    event DelMundo__ContractURIUpdated(string uri);
     event DelMundo__MaxPerWalletUpdated(uint256 amount);
     event DelMundo__MaxSupplyUpdated(uint256 amount);
-    event DelMundo__ContractURIUpdated(string uri);
+    event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
     event DelMundo__RoyaltyUpdated(address indexed recipient, uint96 value);
     event DelMundo__Withdraw(address indexed recipient, uint256 value);
 
-    error DelMundo__NotRay(address caller);
+    error DelMundo__AlreadyMinted();
+    error DelMundo__CannotMoveToDelMundoWallet();
     error DelMundo__IncorrectSigner();
     error DelMundo__InsufficientFunds();
+    error DelMundo__NotRay(address caller);
+    error DelMundo__NullAddressError();
     error DelMundo__SoldOut();
     error DelMundo__TooMany();
-    error DelMundo__AlreadyMinted();
-    error DelMundo__NullAddressError();
-    error DelMundo__CannotMoveToDelMundoWallet();
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes4 public constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
+    // Signing constants
     string public constant SIGNING_DOMAIN = "RayNFT-Voucher";
     string public constant SIGNING_VERSION = "1";
-    bytes4 constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
-    bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-    bytes32 constant VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
+    bytes32 public constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 public constant VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");
 
+    // Some start constants to manage token distribution
     uint256 public s_maxPerWalletAmount = 5;
     uint256 public s_currentMaxSupply = 1000;
+    // Mapping to flag minted tokens
     mapping (uint256 => bool) public s_isTokenMinted;
 
+    // Del Mundo redeeming voucher. Contains the id, ipfs url, set price and the signature of a minter.
     struct NFTVoucher {
         uint256 tokenId;
         string uri;
@@ -70,6 +75,8 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         }
         _;
     }
+
+    //////////////// ADMIN FUNCTIONS ////////////////
 
     function addAdmin(address newAdmin) external onlyRay {
         _grantRole(ADMIN_ROLE, newAdmin);
@@ -98,11 +105,19 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         emit DelMundo__MaxPerWalletUpdated(newAmount);
         s_maxPerWalletAmount = newAmount;
     }
-
-    function setDefaultRoyalites(address recipient, uint96 value) external onlyRay {
+    function setDefaultRoyalties(address recipient, uint96 value) external onlyRay {
         emit DelMundo__RoyaltyUpdated(recipient, value);
         _setDefaultRoyalty(recipient, value);
     }
+    // ERC7572 metadata
+    string private _contractURI;
+    function setContractURI(string memory newURI) public onlyRay  {
+        emit DelMundo__ContractURIUpdated(newURI);
+        _contractURI = newURI;
+    }
+
+
+    //////////////// VIEW FUNCTIONS ////////////////
 
     /// @notice Returns all tokens owned by an address
     /// @param owner - address of the owner of the Ray tokens
@@ -116,18 +131,21 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         return rays;
     }
 
-    // ERC7572 metadata
-    string private _contractURI;
-    function setContractURI(string memory newURI) public onlyRay  {
-        emit DelMundo__ContractURIUpdated(newURI);
-        _contractURI = newURI;
-    }
-
     function contractURI() public view returns (string memory) {
         return _contractURI;
     }
 
-    // EIP712 Section
+    function tokenURI(uint256 tokenId)
+    public
+    view
+    override(ERC721, ERC721URIStorage)
+    returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+
+    //////////////// ERC712 FUNCTIONS ////////////////
 
     /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher An NFTVoucher to hash.
@@ -142,20 +160,20 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
 
     /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher An NFTVoucher describing an unminted NFT.
+    /// @param voucher An NFTVoucher describing an un-minted NFT.
     function _verify(NFTVoucher calldata voucher) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 
     /** @dev This is the core minting function.
-     * The voucher is a pre signed message containing the tokenid of the NFT to mint as well as the metadata uri location on IPFS
+     * The voucher is a pre signed message containing the token id of the NFT to mint as well as the metadata uri location on IPFS
      * The prefixed price is also included and signed so nothing can be tampered with.
      *
-     * Once minted, the voucher cannot be replayed as the tokenId will be already minted. We manage the tokenids outside
-     * NFTs and their ids outside the contract and provide randomised order vouchers to mmmbers.
+     * Once minted, the voucher cannot be replayed as the tokenId will be already minted. We manage the token ids outside
+     * NFTs and their ids outside the contract and provide randomised order vouchers to members.
      *
-     * @param voucher NFTVoucher struct containing tokenId, ipfs metadatauri, price and the typed data signature.
+     * @param voucher NFTVoucher struct containing tokenId, ipfs metadata uri, price and the typed data signature.
      */
     function redeem(NFTVoucher calldata voucher) external payable  returns (uint256) {
         // make sure signature is valid and get the address of the signer
@@ -210,15 +228,6 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         emit DelMundo__Minted(tokenId, uri, to);
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
-    }
-
-    function tokenURI(uint256 tokenId)
-    public
-    view
-    override(ERC721, ERC721URIStorage)
-    returns (string memory)
-    {
-        return super.tokenURI(tokenId);
     }
 
     function _increaseBalance(address account, uint128 value) internal virtual override(ERC721, ERC721Enumerable) {
