@@ -21,20 +21,13 @@ contract BoutiqueFacet {
         return "1.0";
     }
 
-    uint256 constant ERC721 = 721;
-    uint256 constant ERC1155 = 1155;
+    uint256 public constant ERC721 = 721;
+    uint256 public constant ERC1155 = 1155;
 
     function addCollection(address _collection) external {
         LibDiamond.enforceIsContractOwner();
         BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         bs.collections.push(_collection);
-    }
-
-    function removeCollection(address _collection) external {
-        LibDiamond.enforceIsContractOwner();
-        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
-        // TODO remove from array code
-        //bs.collections.pop();
     }
 
     function addERC721Item(address _collection, uint256 _tokenId, uint256 _priceRaywards, uint256 _priceEth) external {

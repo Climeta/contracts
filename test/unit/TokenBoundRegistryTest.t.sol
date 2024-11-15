@@ -28,7 +28,7 @@ contract TokenBoundRegistryTest is Test {
         delMundo = DelMundo(delMundoDeployer.deploy(admin));
     }
 
-    function test_Account() public {
+    function test_Account() public view {
         address account = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
         assertEq(account, RAY_WALLET_0);
     }

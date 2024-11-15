@@ -44,8 +44,6 @@ contract DelMundoHandler is Test, EIP712 {
             address(delMundo)
         ));
         VoucherData memory voucherData;
-        address current = address(this);
-        DelMundo.NFTVoucher memory cleanVoucher;
         bytes32 dataEncoded;
         bytes32 digest;
         DelMundo.NFTVoucher memory voucher;

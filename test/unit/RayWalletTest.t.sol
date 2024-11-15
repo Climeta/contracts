@@ -68,7 +68,7 @@ contract RayWalletTest is Test, IERC721Receiver {
         assertEq(RayWallet(payable(account2)).owner(), user2);
     }
 
-    function test_SupportsInterface() public {
+    function test_SupportsInterface() public view {
         assertEq(rayWallet.supportsInterface(type(IERC165).interfaceId), true);
         assertEq(rayWallet.supportsInterface(type(IDelMundoWallet).interfaceId), true);
         assertEq(rayWallet.supportsInterface(type(IRayWallet).interfaceId), true);
@@ -140,8 +140,8 @@ contract RayWalletTest is Test, IERC721Receiver {
     }
 
     function test_IsNotValidSignature() public {
-        (address notSigner, uint256 notSignerPk) = makeAddrAndKey("not-signer");
-        (address signer, uint256 signerPk) = makeAddrAndKey("signer");
+        (, uint256 notSignerPk) = makeAddrAndKey("not-signer");
+        (address signer, ) = makeAddrAndKey("signer");
         delMundo.safeMint(signer, 0, "ray-uri");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
 

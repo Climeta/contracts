@@ -424,7 +424,6 @@ contract ClimetaDiamondTest is Test {
         IVoting climetaCore = IVoting(climeta);
         Actors memory actor;
         Proposals memory props;
-        uint256 votingRound = climetaCore.getVotingRound();
         actor.beneficiary1 = makeAddr("beneficiary1");
         actor.beneficiary2 = makeAddr("beneficiary2");
         actor.user1 = makeAddr("user1");
@@ -733,7 +732,6 @@ contract ClimetaDiamondTest is Test {
         // Amount is total allocated, minus all the individual vote rewards, divided by 2. First half split amongst all voters, second half split according to the relative raycognition scores of the voting delmundos.
         // Amount for each DelMundo without Raycog = (Total Available - (number of voters * votereward) ) / 2 / Total voted
         // Amount for each DelMundo with Raycog = (Total Available - (number of voters * votereward) ) / 2
-        uint256 amountExpected = 0;
         vm.prank(actor.user1);
         climetaCore.withdrawRaywards();
 
