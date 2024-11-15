@@ -47,7 +47,7 @@ interface IVoting {
     /// @notice Emitted when an ERC20 payout is made
     /// @param _claimer The address withdrawing
     /// @param _amount The amount of the withdrawal
-    event Climeta__RewardClaimed(address _claimer, uint256 _amount);
+    event Climeta__RaywardClaimed(address _claimer, uint256 _amount);
 
     /// @notice Emitted when a token is approved for use as treasury token
     /// @param _token The address of the ERC20 token added
@@ -61,6 +61,10 @@ interface IVoting {
     /// @param _votingNFT The NFT used to vote
     /// @param _proposalId The ID of the proposal being voted on
     event Climeta__Vote(uint256 _votingNFT, uint256 _proposalId);
+
+    /// @notice Emitted when a voting round is successfully ended by Climeta and we move to next round
+    /// @param _votingRound The voting round that has ended.
+    event Climeta__VotingRoundEnded(uint256 _votingRound);
 
     // Errors
     error Climeta__AlreadyInRound();
@@ -88,6 +92,7 @@ interface IVoting {
     function getVotes(uint256 _proposalId) external returns(uint256[] memory);
     function getVotingRound() external view returns(uint256);
     function getWithdrawAmount(address _beneficiary, address _token) external view returns(uint256);
+    function grantRaycognition (uint256 _delmundoId, uint256 _amount) external;
     function hasVoted(uint256 _tokenId) external view returns(bool);
     function isBeneficiary(address _beneficiary) external view returns(bool);
     function pushPayment(address _beneficiary) external;

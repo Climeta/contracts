@@ -14,6 +14,13 @@ contract BoutiqueFacet {
     constructor(){
     }
 
+    /// @notice Returns the version of the contract
+    /// @return The version of the contract
+    /// @dev This function will change when the implementation changes
+    function boutiqueFacetVersion() external pure returns (string memory) {
+        return "1.0";
+    }
+
     uint256 constant ERC721 = 721;
     uint256 constant ERC1155 = 1155;
 

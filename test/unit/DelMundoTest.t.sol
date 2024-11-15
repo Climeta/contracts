@@ -54,7 +54,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
         treasury = payable(makeAddr("treasury"));
         vm.prank(admin);
-        delMundo.setDefaultRoyalites(treasury, 1000);
+        delMundo.setDefaultRoyalties(treasury, 1000);
 
     }
 
