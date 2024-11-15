@@ -5,6 +5,7 @@ import "forge-std/Script.sol";
 import "../src/ClimetaDiamond.sol";
 import "../src/facets/AdminFacet.sol";
 import "../src/utils/DiamondHelper.sol";
+import {IAdmin} from "../src/interfaces/IAdmin.sol";
 import "../src/interfaces/IDiamondCut.sol";
 
 contract DeployAdminFacet is Script, DiamondHelper {
@@ -45,8 +46,8 @@ contract DeployAdminFacet is Script, DiamondHelper {
 
         climeta.diamondCut(cut, address(0), "0x");
 
-        AdminFacet(address(climeta)).setVoteReward(VOTING_REWARD);
-        AdminFacet(address(climeta)).setVotingRoundReward(VOTING_ROUND_REWARD);
+        IAdmin(address(climeta)).setVoteReward(VOTING_REWARD);
+        IAdmin(address(climeta)).setVotingRoundReward(VOTING_ROUND_REWARD);
         vm.stopBroadcast();
     }
 }

@@ -14,6 +14,7 @@ contract DeployRaycognition is Script {
     function run() external {
         address admin = vm.envAddress("OWNER_PUBLIC_KEY");
         address raycognition = this.deploy(admin);
+        console.log("RAYCOGNITION_ADDRESS=", raycognition);
     }
 
 }

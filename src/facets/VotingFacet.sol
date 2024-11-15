@@ -95,7 +95,7 @@ contract VotingFacet is IVoting{
         return vs.nextProposalId - 1;
     }
 
-    function getProposal(uint256 _proposalId) external returns(address, string memory) {
+    function getProposal(uint256 _proposalId) external view returns(address, string memory) {
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
         return (vs.proposalOwner[_proposalId], vs.proposals[_proposalId]);
     }
@@ -113,6 +113,7 @@ contract VotingFacet is IVoting{
         if (vs.proposalVotingRound[_propId] > 0) {
             revert Climeta__AlreadyInRound();
         }
+        emit Climeta__ProposalChanged(_propId, _proposalURI);
         vs.proposals[_propId] = _proposalURI;
     }
 
@@ -294,7 +295,8 @@ contract VotingFacet is IVoting{
         if (amountETH > 0) {
             vs.withdrawals[msg.sender] = 0;
             emit Climeta__Payout(msg.sender, amountETH);
-            payable(msg.sender).call{value: amountETH}("");
+            (bool success,) = payable(msg.sender).call{value: amountETH}("");
+            require(success, "Failed to send ETH");
         }
     }
 
@@ -327,7 +329,8 @@ contract VotingFacet is IVoting{
         if (amountETH > 0) {
             vs.withdrawals[_beneficiary] = 0;
             emit Climeta__Payout(_beneficiary, amountETH);
-            payable(_beneficiary).call{value: amountETH}("");
+            (bool success,) = payable(_beneficiary).call{value: amountETH}("");
+            require(success, "Failed to send ETH");
         }
     }
 
@@ -435,7 +438,6 @@ contract VotingFacet is IVoting{
                 } else {
                     rewards = ((totalRaywardsToSplit / 2) / _totalVotes);
                 }
-                uint256 raycogAmount = 0;
                 // Calc raycog bonus
                 if (totalCognition > 0 && raycognition > 0) {
                     rewards += (totalRaywardsToSplit / 2) * (raycognition/totalCognition);

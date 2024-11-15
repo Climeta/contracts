@@ -19,40 +19,40 @@ contract AdminFacet is IAdmin {
     /////////////// GETTERS ////////////////////////////
 
     /// @notice gets the Ops Treasury address.
-    function getOpsTreasuryAddress() external returns(address)  {
+    function getOpsTreasuryAddress() external view returns(address)  {
         return s.opsTreasuryAddress;
     }
     /// @notice gets the DelMundo contract address.
-    function getDelMundoAddress() external returns(address)  {
+    function getDelMundoAddress() external view returns(address)  {
         return s.delMundoAddress;
     }
     /// @notice gets the DelMundoTraits contract address.
-    function getDelMundoTraitAddress() external returns(address)  {
+    function getDelMundoTraitAddress() external view returns(address)  {
         return s.delMundoTraitAddress;
     }
     /// @notice gets the DelMundoTraits contract address.
-    function getDelMundoWalletAddress() external returns(address)  {
+    function getDelMundoWalletAddress() external view returns(address)  {
         return s.delMundoWalletAddress;
     }
     /// @notice gets the Rayward contract address.
-    function getRaywardAddress() external returns(address)  {
+    function getRaywardAddress() external view returns(address)  {
         return s.raywardAddress;
     }
     /// @notice gets the Raycognition contract address.
-    function getRaycognitionAddress() external returns(address)  {
+    function getRaycognitionAddress() external view returns(address)  {
         return s.raycognitionAddress;
     }
     /// @notice gets the ERC6551 Registry address.
-    function getRegistryAddress() external returns(address)  {
+    function getRegistryAddress() external view returns(address)  {
         return s.registryAddress;
     }
     /// @notice gets the address of Ray Del Mundos Wallet (Reward Pool).
-    function getRayWalletAddress() external returns(address)  {
+    function getRayWalletAddress() external view returns(address)  {
         return s.rayWalletAddress;
     }
 
     /// @notice gets the amount of raywards given for the voting round.
-    function getVotingRoundReward() external returns(uint256)  {
+    function getVotingRoundReward() external view returns(uint256)  {
         return s.votingRoundReward;
     }
     /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
@@ -64,7 +64,7 @@ contract AdminFacet is IAdmin {
     }
 
     /// @notice gets the amount of raywards given for a single vote.
-    function getVoteReward() external returns(uint256)  {
+    function getVoteReward() external view returns(uint256)  {
         return s.voteReward;
     }
     /// @notice Sets the amount of raywards given for a single vote. Can only be called by Admins
@@ -76,7 +76,7 @@ contract AdminFacet is IAdmin {
     }
 
     /// @notice gets the amount of raywards given for a single vote.
-    function getVoteRaycognition() external returns(uint256)  {
+    function getVoteRaycognition() external view returns(uint256)  {
         return s.voteRaycognitionAmount;
     }
     /// @notice Sets the amount of raywards given for a single vote. Can only be called by Admins
@@ -88,7 +88,7 @@ contract AdminFacet is IAdmin {
     }
     /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
     /// @param _withdrawRewardOnly The new reward amount
-    function setWithdrawalType(bool _withdrawRewardOnly) external {
+    function setWithdrawalOnly(bool _withdrawRewardOnly) external {
         LibDiamond.enforceIsContractOwner();
         emit Climeta__RewardWithdrawalTypeChange(_withdrawRewardOnly);
         s.withdrawRewardsOnly = _withdrawRewardOnly;
@@ -155,27 +155,4 @@ contract AdminFacet is IAdmin {
             }
         }
     }
-
-
-    /// @notice Adds a new beneficiary
-    /// @param _beneficiary The address of the new beneficiary
-    /// @param _name The name of the new beneficiary
-    /// @param _dataURI The URI of the data associated with the new beneficiary
-//    function addBeneficiary(address _beneficiary, string calldata _name, string calldata _dataURI) public onlyAdmin {
-//        require(bytes(_name).length > 0, "Name cannot be empty" );
-//        s_beneficiaries[_beneficiary].name = _name;
-//        s_beneficiaries[_beneficiary].approved = true;
-//        s_beneficiaries[_beneficiary].dataURI = _dataURI;
-//        emit ClimetaCore__NewBeneficiary(_beneficiary, _name);
-//    }
-//
-//    /// @notice Removes a beneficiary
-//    /// @param _beneficiary The address of the beneficiary to remove
-//    function removeBeneficiary(address _beneficiary) external onlyAdmin {
-//        if (s_beneficiaries[_beneficiary].approved == true) {
-//            s_beneficiaries[_beneficiary].approved = false;
-//            s_beneficiaries[_beneficiary].name = "";
-//            emit ClimetaCore__RemovedBeneficiary(_beneficiary);
-//        }
-//    }
 }

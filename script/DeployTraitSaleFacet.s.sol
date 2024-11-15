@@ -12,7 +12,6 @@ contract DeployTraitSaleFacet is Script, DiamondHelper {
 
         //read env variables and choose EOA for transaction signing
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -31,9 +30,6 @@ contract DeployTraitSaleFacet is Script, DiamondHelper {
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
         climeta.diamondCut(cut, address(0), "0x");
-
-
-
 
         vm.stopBroadcast();
     }

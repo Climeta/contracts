@@ -103,9 +103,13 @@ contract DonationFacet is IDonation {
         ds.totalDonatedAmount += msg.value;
         ds.donations[msg.sender] += msg.value;
         vs.roundDonations[vs.votingRound] += msg.value * (100-Constants.CLIMETA_PERCENTAGE )/ 100;
+
+        // TODO Grant Raywards for donations if caller is a DelMundo holder
+
         // Send Climetas operations cut
         uint256 opsCut = msg.value * Constants.CLIMETA_PERCENTAGE / 100;
-        s.opsTreasuryAddress.call{value: opsCut}("");
+        (bool success, ) = s.opsTreasuryAddress.call{value: opsCut}("");
+        require(success, "Failed to send ETH to Ops");
     }
 
     // @dev Pull some tokens from donator. They must have been pre-approved.
@@ -128,6 +132,8 @@ contract DonationFacet is IDonation {
         ds.erc20donations[msg.sender][_token] += _amount;
         ds.totalTokenDonations[_token] += _amount;
         vs.roundERC20Donations[vs.votingRound][_token] += _amount * (100-Constants.CLIMETA_PERCENTAGE)/100;
+
+        // TODO Grant Raywards for donations if caller is a DelMundo holder
 
         uint256 opsAmount = (_amount * Constants.CLIMETA_PERCENTAGE) / 100;
         IERC20(_token).transfer(s.opsTreasuryAddress, opsAmount);
