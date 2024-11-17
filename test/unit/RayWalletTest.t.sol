@@ -66,6 +66,12 @@ contract RayWalletTest is Test, IERC721Receiver {
         assertEq(RayWallet(payable(account0)).owner(), address(this));
         assertEq(RayWallet(payable(account1)).owner(), user1);
         assertEq(RayWallet(payable(account2)).owner(), user2);
+
+        // Check different chain
+        vm.chainId(1111);
+        assertEq(RayWallet(payable(account0)).owner(), address(0));
+        assertEq(RayWallet(payable(account1)).owner(), address(0));
+        assertEq(RayWallet(payable(account2)).owner(), address(0));
     }
 
     function test_SupportsInterface() public view {

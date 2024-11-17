@@ -121,6 +121,51 @@ contract ClimetaDonationTest is Test {
     }
 
 
+    function test_MinimumDonations() public {
+
+        vm.startPrank(admin);
+        climetaAdmin.addAllowedToken(address(stablecoin1));
+        climetaAdmin.addAllowedToken(address(stablecoin2));
+        climetaAdmin.addAllowedToken(address(stablecoin3));
+        climeta.setMinimumERC20Donation(address(stablecoin1), 1_000);
+        climeta.setMinimumERC20Donation(address(stablecoin2), 2_000);
+        climeta.setMinimumERC20Donation(address(stablecoin3), 3_000);
+        vm.stopPrank();
+
+        vm.startPrank(brand1);
+        stablecoin1.approve(climetaAddr, 100_000);
+        stablecoin2.approve(climetaAddr, 200_000);
+        stablecoin3.approve(climetaAddr, 300_000);
+
+        vm.expectRevert(IDonation.Climeta__DonationNotAboveThreshold.selector);
+        climeta.donateToken(address(stablecoin1), 999);
+        vm.expectRevert(IDonation.Climeta__DonationNotAboveThreshold.selector);
+        climeta.donateToken(address(stablecoin1), 1);
+        vm.expectRevert(IDonation.Climeta__DonationNotAboveThreshold.selector);
+        climeta.donateToken(address(stablecoin2), 1999);
+        vm.expectRevert(IDonation.Climeta__DonationNotAboveThreshold.selector);
+        climeta.donateToken(address(stablecoin3), 2999);
+
+        vm.expectEmit();
+        emit IDonation.Climeta__ERC20Donation(brand1, address(stablecoin1), 1_000);
+        climeta.donateToken(address(stablecoin1), 1_000);
+
+        vm.expectEmit();
+        emit IDonation.Climeta__ERC20Donation(brand1, address(stablecoin2), 2_000);
+        climeta.donateToken(address(stablecoin2), 2_000);
+        climeta.donateToken(address(stablecoin2), 2_000);
+        assertEq(stablecoin2.balanceOf(brand1), 1_000_000 - 4_000);
+        assertEq(stablecoin2.balanceOf(address(climeta)), 3_600);
+        assertEq(stablecoin2.balanceOf(ops), 400);
+
+        vm.expectEmit();
+        emit IDonation.Climeta__ERC20Donation(brand1, address(stablecoin3), 3_000);
+        climeta.donateToken(address(stablecoin3), 3_000);
+        vm.stopPrank();
+    }
+
+
+
     function test_Donations() public {
         assertEq(IDonation(climeta).donationFacetVersion(), "1.0");
 
@@ -177,74 +222,17 @@ contract ClimetaDonationTest is Test {
         climeta.donateToken(address(stablecoin3), 30);
         vm.stopPrank();
 
+        assertEq(climeta.getTotalDonations(), 5 ether);
+        assertEq(climeta.getTotalTokenDonations(address(stablecoin1)), 110);
+        assertEq(climeta.getTotalTokenDonations(address(stablecoin2)), 220);
+        assertEq(climeta.getTotalTokenDonations(address(stablecoin3)), 330);
 
-        vm.startPrank(brand4);
-        stablecoin1.approve(climetaAddr, 40);
-        stablecoin2.approve(climetaAddr, 60);
-        stablecoin3.approve(climetaAddr, 80);
-        vm.expectEmit();
-        emit IDonation.Climeta__ERC20Donation(brand4, address(stablecoin1), 40);
-        climeta.donateToken(address(stablecoin1), 40);
-        vm.expectEmit();
-        emit IDonation.Climeta__ERC20Donation(brand4, address(stablecoin2), 60);
-        climeta.donateToken(address(stablecoin2), 60);
-        vm.expectEmit();
-        emit IDonation.Climeta__ERC20Donation(brand4, address(stablecoin3), 80);
-        climeta.donateToken(address(stablecoin3), 80);
+        vm.startPrank(brand2);
+        climeta.donate{value: 10 ether}();
         vm.stopPrank();
+        assertEq(climeta.getTotalDonations(), 15 ether);
 
-        assertEq(climeta.getTotalTokenDonations(address(stablecoin1)), 150);
-        assertEq(climeta.getTotalTokenDonations(address(stablecoin2)), 280);
-        assertEq(climeta.getTotalTokenDonations(address(stablecoin3)), 410);
 
-        assertEq(stablecoin1.balanceOf(climetaAddr), 150 * 9/10 );
-        assertEq(stablecoin2.balanceOf(climetaAddr), 280 * 9/10 );
-        assertEq(stablecoin3.balanceOf(climetaAddr), 410 * 9/10 );
-
-        assertEq(stablecoin1.balanceOf(ops), 150 * 1/10 );
-        assertEq(stablecoin2.balanceOf(ops), 280 * 1/10 );
-        assertEq(stablecoin3.balanceOf(ops), 410 * 1/10 );
-
-        assertEq(climeta.getTokenDonations(brand1, address(stablecoin1)), 0);
-        assertEq(climeta.getTokenDonations(brand2, address(stablecoin1)), 100);
-        assertEq(climeta.getTokenDonations(brand3, address(stablecoin1)), 10);
-        assertEq(climeta.getTokenDonations(brand4, address(stablecoin1)), 40);
-
-        assertEq(climeta.getTokenDonations(brand1, address(stablecoin2)), 0);
-        assertEq(climeta.getTokenDonations(brand2, address(stablecoin2)), 200);
-        assertEq(climeta.getTokenDonations(brand3, address(stablecoin2)), 20);
-        assertEq(climeta.getTokenDonations(brand4, address(stablecoin2)), 60);
-
-        assertEq(climeta.getTokenDonations(brand1, address(stablecoin3)), 0);
-        assertEq(climeta.getTokenDonations(brand2, address(stablecoin3)), 300);
-        assertEq(climeta.getTokenDonations(brand3, address(stablecoin3)), 30);
-        assertEq(climeta.getTokenDonations(brand4, address(stablecoin3)), 80);
-
-        vm.startPrank(brand4);
-        stablecoin1.approve(climetaAddr, 40);
-        stablecoin2.approve(climetaAddr, 60);
-        stablecoin3.approve(climetaAddr, 80);
-        vm.expectEmit();
-        emit IDonation.Climeta__ERC20Donation(brand4, address(stablecoin1), 40);
-        climeta.donateToken(address(stablecoin1), 40);
-        vm.expectEmit();
-        emit IDonation.Climeta__ERC20Donation(brand4, address(stablecoin2), 60);
-        climeta.donateToken(address(stablecoin2), 60);
-        vm.expectEmit();
-        emit IDonation.Climeta__ERC20Donation(brand4, address(stablecoin3), 80);
-        climeta.donateToken(address(stablecoin3), 80);
-        vm.stopPrank();
-
-        assertEq(climeta.getTotalTokenDonations(address(stablecoin1)), 190);
-        assertEq(climeta.getTotalTokenDonations(address(stablecoin2)), 340);
-        assertEq(climeta.getTotalTokenDonations(address(stablecoin3)), 490);
-
-        assertEq(climeta.getTokenDonations(brand4, address(stablecoin1)), 80);
-        assertEq(climeta.getTokenDonations(brand4, address(stablecoin2)), 120);
-        assertEq(climeta.getTokenDonations(brand4, address(stablecoin3)), 160);
-
-        assertEq(stablecoin3.balanceOf(climetaAddr), 490 * 9/10 );
-        assertEq(stablecoin3.balanceOf(ops), 490 * 1/10 );
     }
 }
 

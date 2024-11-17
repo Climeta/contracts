@@ -140,7 +140,6 @@ contract VotingFacet is IVoting{
         vs.votingRoundProposals[vs.votingRound].push(_proposalId);
     }
 
-
     /**
     * @dev Removal from voting round will be an exception use case, hence the less gas effective manner of removing as opposed to adding.
     * The bulk of the work is in removing from the proposal array for the voting round, but this array will only really be a handful of
