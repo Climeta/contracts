@@ -128,8 +128,11 @@ contract ClimetaDonationTest is Test {
         climetaAdmin.addAllowedToken(address(stablecoin2));
         climetaAdmin.addAllowedToken(address(stablecoin3));
         climeta.setMinimumERC20Donation(address(stablecoin1), 1_000);
+        assertEq(climeta.getMinimumERC20Donation(address(stablecoin1)), 1_000);
         climeta.setMinimumERC20Donation(address(stablecoin2), 2_000);
+        assertEq(climeta.getMinimumERC20Donation(address(stablecoin2)), 2_000);
         climeta.setMinimumERC20Donation(address(stablecoin3), 3_000);
+        assertEq(climeta.getMinimumERC20Donation(address(stablecoin3)), 3_000);
         vm.stopPrank();
 
         vm.startPrank(brand1);
@@ -174,6 +177,7 @@ contract ClimetaDonationTest is Test {
         climetaAdmin.addAllowedToken(address(stablecoin2));
         climetaAdmin.addAllowedToken(address(stablecoin3));
         climeta.setMinimumEthDonation(1 ether);
+        assertEq(climeta.getMinimumEthDonation(), 1 ether);
         vm.stopPrank();
 
         vm.startPrank(brand1);
@@ -199,12 +203,15 @@ contract ClimetaDonationTest is Test {
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin1), 100);
         climeta.donateToken(address(stablecoin1), 100);
+        assertEq(climeta.getTokenDonations(brand2, address(stablecoin1) ), 100);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin2), 200);
         climeta.donateToken(address(stablecoin2), 200);
+        assertEq(climeta.getTokenDonations(brand2, address(stablecoin2) ), 200);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin3), 300);
         climeta.donateToken(address(stablecoin3), 300);
+        assertEq(climeta.getTokenDonations(brand2, address(stablecoin3) ), 300);
         vm.stopPrank();
 
         vm.startPrank(brand3);
@@ -214,6 +221,7 @@ contract ClimetaDonationTest is Test {
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand3, address(stablecoin1), 10);
         climeta.donateToken(address(stablecoin1), 10);
+        assertEq(climeta.getTokenDonations(brand3, address(stablecoin1) ), 10);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand3, address(stablecoin2), 20);
         climeta.donateToken(address(stablecoin2), 20);
@@ -226,6 +234,29 @@ contract ClimetaDonationTest is Test {
         assertEq(climeta.getTotalTokenDonations(address(stablecoin1)), 110);
         assertEq(climeta.getTotalTokenDonations(address(stablecoin2)), 220);
         assertEq(climeta.getTotalTokenDonations(address(stablecoin3)), 330);
+
+        vm.startPrank(brand2);
+        stablecoin1.approve(climetaAddr, 100);
+        stablecoin2.approve(climetaAddr, 200);
+        stablecoin3.approve(climetaAddr, 300);
+        vm.expectEmit();
+        emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin1), 100);
+        climeta.donateToken(address(stablecoin1), 100);
+        assertEq(climeta.getTokenDonations(brand2, address(stablecoin1) ), 200);
+        vm.expectEmit();
+        emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin2), 200);
+        climeta.donateToken(address(stablecoin2), 200);
+        assertEq(climeta.getTokenDonations(brand2, address(stablecoin2)), 400);
+        vm.expectEmit();
+        emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin3), 300);
+        climeta.donateToken(address(stablecoin3), 300);
+        assertEq(climeta.getTokenDonations(brand2, address(stablecoin3) ), 600);
+        vm.stopPrank();
+
+        assertEq(climeta.getTotalTokenDonations(address(stablecoin1)), 210);
+        assertEq(climeta.getTotalTokenDonations(address(stablecoin2)), 420);
+        assertEq(climeta.getTotalTokenDonations(address(stablecoin3)), 630);
+
 
         vm.startPrank(brand2);
         climeta.donate{value: 10 ether}();

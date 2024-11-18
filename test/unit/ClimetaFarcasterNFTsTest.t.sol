@@ -18,7 +18,6 @@ contract ClimetaFarcasterNFTsTest is Test {
 
     function test_minting() public {
         address user1 = makeAddr("user1");
-        address user2 = makeAddr("user2");
 
         vm.startPrank(user1);
         vm.expectRevert();

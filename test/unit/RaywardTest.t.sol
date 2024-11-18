@@ -46,7 +46,7 @@ contract RaywardTest is Test {
         vm.stopPrank();
     }
 
-    function test_Decimals() public {
+    function test_Decimals() public view {
         assertEq(rayward.decimals(), DECIMALS);
     }
 

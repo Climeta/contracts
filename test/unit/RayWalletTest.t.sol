@@ -8,6 +8,7 @@ import {ERC6551Registry} from "@tokenbound/erc6551/ERC6551Registry.sol";
 import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {DeployTokenBoundRegistry} from "../../script/DeployTokenBoundRegistry.s.sol";
 
 import "../utils/CallTest.sol";
@@ -21,7 +22,9 @@ contract RayWalletTest is Test, IERC721Receiver {
     DelMundo delMundo;
     CallTest callTest;
     address user1;
+    uint256 user1Pk;
     address user2;
+    uint256 user2Pk;
     address admin;
 
     function setUp() public {
@@ -40,16 +43,19 @@ contract RayWalletTest is Test, IERC721Receiver {
         vm.prank(admin);
         delMundo.addAdmin(current);
 
-        user1 = makeAddr("user1");
-        user2 = makeAddr("user2");
+        (user1, user1Pk) = makeAddrAndKey("user1");
+        (user2, user2Pk) = makeAddrAndKey("user2");
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function test_IsValidRayWallet() public view {
+    function test_Interfaces() public {
         assertEq(rayWallet.iAmADelMundoWallet(), true);
+        assertEq(rayWallet.onERC1155Received(address(0),address(0),0,0,'0x'), IERC1155Receiver.onERC1155Received.selector);
+        uint256[] memory arr1;
+        assertEq(rayWallet.onERC1155BatchReceived(address(0),address(0),arr1,arr1,'0x'), IERC1155Receiver.onERC1155BatchReceived.selector);
     }
 
     function test_Ownership() public {
@@ -72,6 +78,7 @@ contract RayWalletTest is Test, IERC721Receiver {
         assertEq(RayWallet(payable(account0)).owner(), address(0));
         assertEq(RayWallet(payable(account1)).owner(), address(0));
         assertEq(RayWallet(payable(account2)).owner(), address(0));
+        vm.chainId(31337);
     }
 
     function test_SupportsInterface() public view {
@@ -136,13 +143,49 @@ contract RayWalletTest is Test, IERC721Receiver {
     function test_IsValidSignature() public {
         (address signer, uint256 signerPk) = makeAddrAndKey("signer");
         delMundo.safeMint(signer, 0, "ray-uri");
+        delMundo.safeMint(user1, 1, "delmundo1-uri");
+        delMundo.safeMint(user2, 2, "delmundo2-uri");
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+        address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
+        address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
 
         string memory clearText = "Hello, World!";
         bytes32 digest = keccak256(abi.encodePacked(clearText));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
         assertEq(RayWallet(payable(address(account0))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
+
+        clearText = "I own DelMundo 1";
+        digest = keccak256(abi.encodePacked(clearText));
+        (v, r, s) = vm.sign(user1Pk, digest);
+        signature = abi.encodePacked(r, s, v);
+        assertEq(RayWallet(payable(address(account1))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
+        (v, r, s) = vm.sign(user2Pk, digest);
+        signature = abi.encodePacked(r, s, v);
+        assertNotEq(RayWallet(payable(address(account1))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
+
+        clearText = "I own DelMundo 2";
+        digest = keccak256(abi.encodePacked(clearText));
+        (v, r, s) = vm.sign(user1Pk, digest);
+        signature = abi.encodePacked(r, s, v);
+        assertNotEq(RayWallet(payable(address(account2))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
+        (v, r, s) = vm.sign(user2Pk, digest);
+        signature = abi.encodePacked(r, s, v);
+        assertEq(RayWallet(payable(address(account2))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
+
+        // Test move DelMundo from user1 to user2
+        vm.prank(user1);
+        delMundo.safeTransferFrom(user1, user2, 1);
+        assertEq(delMundo.ownerOf(1), user2);
+
+        clearText = "I own DelMundo 1";
+        digest = keccak256(abi.encodePacked(clearText));
+        (v, r, s) = vm.sign(user1Pk, digest);
+        signature = abi.encodePacked(r, s, v);
+        assertNotEq(RayWallet(payable(address(account1))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
+        (v, r, s) = vm.sign(user2Pk, digest);
+        signature = abi.encodePacked(r, s, v);
+        assertEq(RayWallet(payable(address(account1))).isValidSignature(digest, signature), IERC1271.isValidSignature.selector);
     }
 
     function test_IsNotValidSignature() public {
