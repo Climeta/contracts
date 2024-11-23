@@ -169,8 +169,47 @@ contract ClimetaDiamondTest is Test {
     function test_AdminFunctions() public {
         admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
         ops = IAdmin(climeta).getOpsTreasuryAddress();
+        IVoting climetaCore = IVoting(climeta);
+        Actors memory users;
 
+        // Setup Ray and his reward pool wallet
+        vm.startPrank(admin);
+        delMundo.safeMint(admin, 0, "uri-ray"); // This is Ray himself
+        users.account0 = registry.createAccount(delMundoWalletAddress, 0, block.chainid, delMundoAddress, 0);
+        rayward.mint(users.account0, REWARDPOOL_INITIAL);
 
+        string memory abiFunc = "approve(address,uint256)";
+        bytes memory callData = abi.encodeWithSignature(abiFunc, climeta, REWARDPOOL_INITIAL);
+        RayWallet account0wallet = RayWallet(payable(users.account0));
+        console.log("Owner of Ray Wallet ", account0wallet.owner());
+        account0wallet.executeCall(raywardAddress, 0, callData);
+        vm.stopPrank();
+
+        users.user1 = makeAddr("user1");
+        users.user2 = makeAddr("user2");
+        users.user3 = makeAddr("user3");
+
+        assertEq(rayward.balanceOf(users.user1), 0);
+        assertEq(rayward.balanceOf(users.user2), 0);
+        assertEq(rayward.balanceOf(users.user3), 0);
+
+        vm.prank(users.user1);
+        vm.expectRevert();
+        climetaCore.sendRaywards(users.user1, 1_000);
+
+        vm.prank(users.user1);
+        vm.expectRevert();
+        climetaCore.sendRaywards(users.user2, 1_000);
+
+        vm.startPrank(admin);
+        climetaCore.sendRaywards(users.user1, 1_000);
+        climetaCore.sendRaywards(users.user2, 2_000);
+        climetaCore.sendRaywards(users.user3, 3_000);
+        vm.stopPrank();
+
+        assertEq(rayward.balanceOf(users.user1), 1_000);
+        assertEq(rayward.balanceOf(users.user2), 2_000);
+        assertEq(rayward.balanceOf(users.user3), 3_000);
     }
 
     function test_ChangeOwner() public {
@@ -322,6 +361,10 @@ contract ClimetaDiamondTest is Test {
         vm.prank(beneficiary2);
         vm.expectRevert(IVoting.Climeta__AlreadyInRound.selector);
         IVoting(climeta).updateProposalMetadata(proposalId2, "proposal1-uri2a");
+
+        vm.prank(beneficiary2);
+        vm.expectRevert(IVoting.Climeta__NotProposalOwner.selector);
+        IVoting(climeta).updateProposalMetadata(1111, "proposal1-uri2a");
     }
 
     function test_RaycognitionGranting() public {

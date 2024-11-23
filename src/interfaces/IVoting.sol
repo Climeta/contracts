@@ -97,6 +97,7 @@ interface IVoting {
     function isBeneficiary(address _beneficiary) external view returns(bool);
     function pushPayment(address _beneficiary) external;
     function removeProposalFromVotingRound (uint256 _proposalId) external;
+    function sendRaywards(address _to, uint256 _amount) external;
     function updateProposalMetadata(uint256 _propId, string calldata _proposalURI) external;
     function votingFacetVersion() external pure returns (string memory);
     function withdraw() external;
