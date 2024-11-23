@@ -146,8 +146,32 @@ contract ClimetaDiamondTest is Test {
         vm.prank(admin);
         IAdmin(climeta).setVoteRaycognition(VOTE_RAYCOGNITION*2);
         assertEq(IAdmin(climeta).getVoteRaycognition(), VOTE_RAYCOGNITION*2);
+
+        assertEq(IAdmin(climeta).getDelMundoAddress(), delMundoAddress);
+        assertEq(IAdmin(climeta).getDelMundoTraitAddress(), vm.envAddress("DELMUNDOTRAIT_ADDRESS"));
+        assertEq(IAdmin(climeta).getDelMundoWalletAddress(), vm.envAddress("DELMUNDOWALLET_ADDRESS"));
+        assertEq(IAdmin(climeta).getRaywardAddress(), vm.envAddress("RAYWARD_ADDRESS"));
+        assertEq(IAdmin(climeta).getRaycognitionAddress(), vm.envAddress("RAYCOGNITION_ADDRESS"));
+        assertEq(IAdmin(climeta).getRegistryAddress(), vm.envAddress("REGISTRY_ADDRESS"));
+        assertEq(IAdmin(climeta).getRayWalletAddress(), vm.envAddress("RAYWALLET_ADDRESS"));
+
+        assertEq(IAdmin(climeta).getOpsTreasuryAddress(), vm.envAddress("OPS_TREASURY_ADDRESS"));
+        address newOps = makeAddr("NewOps");
+        vm.prank(admin);
+        IAdmin(climeta).updateOpsTreasuryAddress(payable(newOps));
+        assertEq(IAdmin(climeta).getOpsTreasuryAddress(), newOps);
+        vm.prank(admin);
+        IAdmin(climeta).updateOpsTreasuryAddress(payable(vm.envAddress("OPS_TREASURY_ADDRESS")));
+        assertEq(IAdmin(climeta).getOpsTreasuryAddress(), payable(vm.envAddress("OPS_TREASURY_ADDRESS")));
+
     }
 
+    function test_AdminFunctions() public {
+        admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+        ops = IAdmin(climeta).getOpsTreasuryAddress();
+
+
+    }
 
     function test_ChangeOwner() public {
         address newAdmin1 = makeAddr("new-admin1");
@@ -166,7 +190,6 @@ contract ClimetaDiamondTest is Test {
         IOwnership(climeta).transferOwnership(newAdmin2);
         assertEq(IOwnership(climeta).owner(), newAdmin2);
     }
-
 
     function test_TransferReverts() public {
         deal(address(this), 2 ether);

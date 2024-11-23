@@ -340,12 +340,12 @@ contract VotingFacet is IVoting{
     * This is currently set to 10% at time of writing. The remaining 90% is then split based on the number of votes each proposal received.
     *
     * The actual funds are not actually sent out from this function though. What we do is add in what each beneficiary can withdraw
-    * and add this to the s_withdrawls mapping. This is then pulled out by the beneficiary themselves. There is also an admin only function
+    * and add this to the s_withdrawals mapping. This is then pulled out by the beneficiary themselves. There is also an admin only function
     * which allows Climeta to push the funds individually from this contract to the beneficiary as a failsafe.
     *
     * The whole fund amount is allocated at this point, there should be nothing left.
     *
-    * Going forwards this will become less centralised and more automated via timeboxing and other mechanisms, but for now
+    * Going forwards this will become less centralised and more automated via time-boxing and other mechanisms, but for now
     * is fully under the control of Climeta.
     *
     * Once the voting round is concluded, the voting round counter is incremented and we begin again.

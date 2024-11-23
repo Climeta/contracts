@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
 import {DeployDelMundo} from "./DeployDelMundo.s.sol";
+import {DeployDelMundoTrait} from "./DeployDelMundoTrait.s.sol";
 import {DeployRayward} from "./DeployRayward.s.sol";
 import {DeployClimetaDiamond} from "./DeployClimetaDiamond.s.sol";
 import {DeployRaycognition} from "./DeployRaycognition.s.sol";
@@ -14,6 +15,7 @@ import {DeployRayWallet} from "./DeployRayWallet.s.sol";
 contract DeployAll is Script {
     address public admin;
     address public delMundoAddr;
+    address public delMundoTraitAddr;
     address public raywardAddr;
     address public raycognitionAddr;
     address public wallet;
@@ -44,6 +46,10 @@ contract DeployAll is Script {
         DeployDelMundo delMundo = new DeployDelMundo();
         delMundoAddr = delMundo.deploy(admin);
         console.log("DELMUNDO_ADDRESS=", delMundoAddr);
+
+        DeployDelMundoTrait delMundoTrait = new DeployDelMundoTrait();
+        delMundoTraitAddr = delMundoTrait.deploy(admin);
+        console.log("DELMUNDOTRAIT_ADDRESS=", delMundoTraitAddr);
 
         DeployRayward rayward = new DeployRayward();
         raywardAddr = rayward.deploy(admin);

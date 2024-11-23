@@ -20,7 +20,7 @@ struct TraitStruct {
 
 // TODO need to create all the erc1155 metadata for every trait. This needs to contain the number of each trait that can be minted.
 
-contract DelMundoTraits is ERC1155Supply, Ownable {
+contract DelMundoTrait is ERC1155Supply, Ownable {
     error DelMundoTraits__AlreadyMinted();
     error DelMundoTraits__NullAddressError();
     error DelMundoTraits__TokenNotConfigured();
