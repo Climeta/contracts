@@ -9,6 +9,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
+import {IDelMundoWallet} from "../interfaces/IDelMundoWallet.sol";
 
 /**
  * @title Membership NFT for Climeta
@@ -23,10 +24,14 @@ import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC
  */
 contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable, AccessControl, ERC721Royalty {
 
+    event DelMundo__AdminAdded(address indexed newAdmin);
+    event DelMundo__AdminRevoked(address indexed oldAdmin);
     event DelMundo__ContractURIUpdated(string uri);
     event DelMundo__MaxPerWalletUpdated(uint256 amount);
     event DelMundo__MaxSupplyUpdated(uint256 amount);
     event DelMundo__Minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
+    event DelMundo__MinterAdded(address indexed newMinter);
+    event DelMundo__MinterRevoked(address indexed oldMinter);
     event DelMundo__RoyaltyUpdated(address indexed recipient, uint96 value);
     event DelMundo__Withdraw(address indexed recipient, uint256 value);
 
@@ -41,8 +46,8 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes4 public constant I_AM_DELMUNDO_WALLET = bytes4(keccak256("iAmADelMundoWallet()"));
-    // Signing constants
+
+// Signing constants
     string public constant SIGNING_DOMAIN = "RayNFT-Voucher";
     string public constant SIGNING_VERSION = "1";
     bytes32 public constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -79,16 +84,20 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     //////////////// ADMIN FUNCTIONS ////////////////
 
     function addAdmin(address newAdmin) external onlyRay {
+        emit DelMundo__AdminAdded(newAdmin);
         _grantRole(ADMIN_ROLE, newAdmin);
     }
     function revokeAdmin(address oldAdmin) external onlyRay {
         require (msg.sender != oldAdmin, "Can't revoke yourself");
+        emit DelMundo__AdminRevoked(oldAdmin);
         _revokeRole(ADMIN_ROLE, oldAdmin);
     }
     function addMinter(address newMinter) external onlyRay {
+        emit DelMundo__MinterAdded(newMinter);
         _grantRole(MINTER_ROLE, newMinter);
     }
     function revokeMinter(address oldMinter) external onlyRay {
+        emit DelMundo__MinterRevoked(oldMinter);
         _revokeRole(MINTER_ROLE, oldMinter);
     }
     function pause() external onlyRay {
@@ -236,7 +245,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
 
     // @dev this override prevents DelMundos from being moved to the ERC6551 locker wallet of another DelMundo.
     function _update (address to, uint256 tokenId, address auth) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) returns(address) {
-        bool isDelMundoWallet = ERC165Checker.supportsInterface(to, I_AM_DELMUNDO_WALLET);
+        bool isDelMundoWallet = ERC165Checker.supportsInterface(to, type(IDelMundoWallet).interfaceId);
         if (isDelMundoWallet) {
             revert DelMundo__CannotMoveToDelMundoWallet();
         }
@@ -246,10 +255,17 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC721, ERC721Enumerable, AccessControl, ERC721URIStorage, ERC721Royalty)
+    override(ERC721, ERC721Royalty, ERC721Enumerable, AccessControl, ERC721URIStorage)
     returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        // TODO I shouldn't have to do this as I understand, but I do to make it work
+        return
+            interfaceId == type(ERC721).interfaceId ||
+            interfaceId == type(ERC721Royalty).interfaceId ||
+            interfaceId == type(ERC721Enumerable).interfaceId ||
+            interfaceId == type(AccessControl).interfaceId ||
+            interfaceId == type(ERC721URIStorage).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     function withdraw(address payable account) external payable onlyRay {

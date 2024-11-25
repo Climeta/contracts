@@ -10,6 +10,11 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
+import {ERC721Enumerable, ERC721} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
 contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
@@ -58,10 +63,15 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
     }
 
-    function test_publicVariables() public view {
+    function test_Basics() public view {
         assertEq(delMundo.s_maxPerWalletAmount(), MAX_PER_WALLET);
         assertEq(delMundo.s_currentMaxSupply(), MAX_SUPPLY);
         assertFalse(delMundo.s_isTokenMinted(0));
+        assertTrue(ERC165Checker.supportsInterface(address(delMundo), type(ERC721Royalty).interfaceId));
+        assertTrue(ERC165Checker.supportsInterface(address(delMundo), type(ERC721Enumerable).interfaceId));
+        assertTrue(ERC165Checker.supportsInterface(address(delMundo), type(ERC721).interfaceId));
+        assertTrue(ERC165Checker.supportsInterface(address(delMundo), type(AccessControl).interfaceId));
+        assertTrue(ERC165Checker.supportsInterface(address(delMundo), type(ERC721URIStorage).interfaceId));
     }
 
     function testFuzz_publicVariables(uint256 tokenid) public view {
@@ -71,17 +81,28 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function test_AddAdmin() public {
         address newAdmin = makeAddr("new-admin");
         address newerAdmin = makeAddr("newer-admin");
+
+        vm.expectEmit();
+        emit DelMundo.DelMundo__AdminAdded(newAdmin);
         delMundo.addAdmin(newAdmin);
         assert(delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
         // test if new admin can add admins
         vm.prank(newAdmin);
+        vm.expectEmit();
+        emit DelMundo.DelMundo__AdminAdded(newerAdmin);
         delMundo.addAdmin(newerAdmin);
     }
 
     function test_RevokeAdmin() public {
         address newAdmin = makeAddr("new-admin");
+
+        vm.expectEmit();
+        emit DelMundo.DelMundo__AdminAdded(newAdmin);
         delMundo.addAdmin(newAdmin);
         assert(delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
+
+        vm.expectEmit();
+        emit DelMundo.DelMundo__AdminRevoked(newAdmin);
         delMundo.revokeAdmin(newAdmin);
         assert(!delMundo.hasRole(delMundo.ADMIN_ROLE(), newAdmin));
     }
@@ -129,11 +150,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         address user1 = makeAddr("user1");
         vm.deal(user1, 10 ether);
         vm.prank(user1);
-        vm.expectEmit(true,true,true,false);
+        emit DelMundo__Minted(2, "https://token.uri2/", user1);
         emit Transfer(address(0), admin, 2);
         emit Transfer(admin, user1, 2);
-        emit Transfer(admin, user1, 2);
-        emit DelMundo__Minted(2, "https://token.uri2/", user1);
         delMundo.redeem{value: 2 ether}(voucher2);
         assertEq(delMundo.ownerOf(voucher2.tokenId), user1);
 
@@ -144,6 +163,10 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         vm.expectRevert(DelMundo.DelMundo__AlreadyMinted.selector);
         delMundo.redeem{value: 2 ether}(voucher2);
         assertEq(delMundo.ownerOf(voucher2.tokenId), user1);
+
+        vm.prank(admin);
+        vm.expectRevert(DelMundo.DelMundo__AlreadyMinted.selector);
+        delMundo.safeMint(user2, voucher2.tokenId, voucher2.uri);
 
         vm.prank(user2);
         delMundo.redeem{value: 1 ether}(voucher1);
@@ -166,6 +189,113 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.redeem{value: 1 ether}(voucher3);
         assertEq(delMundo.ownerOf(voucher3.tokenId), user1);
         assertEq(delMundo.tokensOfOwner(user1).length, 2);
+    }
+
+    struct Vouchers {
+        DelMundo.NFTVoucher voucher1minter1;
+        DelMundo.NFTVoucher voucher2minter1;
+        DelMundo.NFTVoucher voucher1minter2;
+        DelMundo.NFTVoucher voucher2minter2;
+    }
+
+    struct Accounts {
+        address user1;
+        address minter1;
+        uint256 minter1Pk;
+        address minter2;
+        uint256 minter2Pk;
+    }
+
+    function test_MinterRoleSigning() public {
+        // Let's create some vouchers!
+        Vouchers memory vouchers;
+        Accounts memory accounts;
+
+        bytes32 domainSeparatorHash = keccak256(abi.encode(
+            EIP712DOMAIN_TYPEHASH,
+            keccak256(bytes(SIGNING_DOMAIN)),
+            keccak256(bytes(SIGNATURE_VERSION)),
+            block.chainid,
+            address(delMundo)
+        ));
+        // We are going to create new minters, make sure they don't work, add them in and test out combos.
+        (accounts.minter1, accounts.minter1Pk) = makeAddrAndKey("minter1");
+        (accounts.minter2, accounts.minter2Pk) = makeAddrAndKey("minter2");
+
+        VoucherData memory _voucherData = VoucherData(1, "https://token.uri/1", 1 ether);
+        bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(accounts.minter1Pk, digest);
+        bytes memory voucherSignature = abi.encodePacked(r,s,v);
+        vouchers.voucher1minter1 = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
+        (v, r, s) = vm.sign(accounts.minter2Pk, digest);
+        voucherSignature = abi.encodePacked(r,s,v);
+        vouchers.voucher1minter2 = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
+        _voucherData = VoucherData(2, "https://token.uri/2", 1 ether);
+        dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
+        digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
+
+        (v, r, s) = vm.sign(accounts.minter1Pk, digest);
+        voucherSignature = abi.encodePacked(r,s,v);
+        vouchers.voucher2minter1 = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
+        (v, r, s) = vm.sign(accounts.minter2Pk, digest);
+        voucherSignature = abi.encodePacked(r,s,v);
+        vouchers.voucher2minter2 = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
+        // Let's redeem them in reverse order!
+        accounts.user1 = makeAddr("user1");
+        vm.deal(accounts.user1, 10 ether);
+
+        vm.prank(accounts.user1);
+        vm.expectRevert(DelMundo.DelMundo__IncorrectSigner.selector);
+        delMundo.redeem{value: 1 ether}(vouchers.voucher1minter1);
+
+        vm.prank(accounts.user1);
+        vm.expectRevert(DelMundo.DelMundo__IncorrectSigner.selector);
+        delMundo.redeem{value: 1 ether}(vouchers.voucher1minter2);
+
+        vm.prank(admin);
+        vm.expectEmit();
+        emit DelMundo.DelMundo__MinterAdded(accounts.minter1);
+        delMundo.addMinter(accounts.minter1);
+
+        vm.prank(accounts.user1);
+        vm.expectRevert(DelMundo.DelMundo__IncorrectSigner.selector);
+        delMundo.redeem{value: 1 ether}(vouchers.voucher1minter2);
+
+        vm.prank(accounts.user1);
+        vm.expectEmit();
+        emit DelMundo__Minted(1, "https://token.uri/1", accounts.user1);
+        emit Transfer(address(0), accounts.minter1, 1);
+        emit Transfer(accounts.minter1, accounts.user1, 1);
+        delMundo.redeem{value: 1 ether}(vouchers.voucher1minter1);
+        assertEq(delMundo.ownerOf(vouchers.voucher1minter1.tokenId), accounts.user1);
+
+        vm.prank(admin);
+        vm.expectEmit();
+        emit DelMundo.DelMundo__MinterAdded(accounts.minter2);
+        delMundo.addMinter(accounts.minter2);
+
+        vm.prank(admin);
+        vm.expectEmit();
+        emit DelMundo.DelMundo__MinterRevoked(accounts.minter1);
+        delMundo.revokeMinter(accounts.minter1);
+
+        vm.prank(accounts.user1);
+        vm.expectRevert(DelMundo.DelMundo__IncorrectSigner.selector);
+        delMundo.redeem{value: 1 ether}(vouchers.voucher2minter1);
+
+        vm.prank(accounts.user1);
+        vm.expectEmit();
+        emit DelMundo__Minted(2, "https://token.uri/2", accounts.user1);
+        emit Transfer(address(0), accounts.minter2, 1);
+        emit Transfer(accounts.minter2, accounts.user1, 1);
+        delMundo.redeem{value: 1 ether}(vouchers.voucher2minter2);
+        assertEq(delMundo.ownerOf(vouchers.voucher2minter2.tokenId), accounts.user1);
     }
 
     function test_transferToDifferentWallets() public {
@@ -288,13 +418,36 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_MaxSupply() public {
+        bytes32 domainSeparatorHash = keccak256(abi.encode(
+            EIP712DOMAIN_TYPEHASH,
+            keccak256(bytes(SIGNING_DOMAIN)),
+            keccak256(bytes(SIGNATURE_VERSION)),
+            block.chainid,
+            address(delMundo)
+        ));
+
+        VoucherData memory _voucherData = VoucherData(2, "https://token.uri/2", 1 ether);
+        bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
+        // this rsv combo is correct
+        bytes memory voucherSignature = abi.encodePacked(r,s,v);
+        DelMundo.NFTVoucher memory cleanVoucher = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
         // Set to low value so it will fail when trying to mint new one
         delMundo.updateMaxSupply(1);
         delMundo.safeMint(address(this), 0, "uri-0");
         delMundo.safeMint(address(this), 1, "uri-1");
+
+        address user1 = makeAddr("user1");
+        vm.deal(user1, 10 ether);
+        vm.startPrank(user1);
         vm.expectRevert(DelMundo.DelMundo__SoldOut.selector);
+        delMundo.redeem{value: 1 ether}(cleanVoucher);
+        vm.stopPrank();
 
         // Increase by 1 and confirm
+        vm.expectRevert(DelMundo.DelMundo__SoldOut.selector);
         delMundo.safeMint(address(this), 2, "uri-2");
         delMundo.updateMaxSupply(2);
         delMundo.safeMint(address(this), 2, "uri-2");
@@ -333,6 +486,10 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function test_Withdraw() public {
         // Put 10 ETH in DelMundo and check that the withdraw function moves it to the treasury address
         deal(address(delMundo), 10 ether);
+
+        vm.expectRevert(DelMundo.DelMundo__NullAddressError.selector);
+        delMundo.withdraw(payable(address(0)));
+
         delMundo.withdraw(treasury);
         uint256 balanceAfter = treasury.balance;
         assertEq(balanceAfter, 10 ether);
@@ -342,12 +499,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         delMundo.renounceRole(delMundo.ADMIN_ROLE(), address(this));
         vm.expectRevert();
         delMundo.withdraw(payable(address(this)));
-    }
-
-    function test_WithdrawWithNullAddress() public {
-        deal(address(delMundo), 10 ether);
-        vm.expectRevert(DelMundo.DelMundo__NullAddressError.selector);
-        delMundo.withdraw(payable(address(0)));
     }
 
     function test_SetContractURI() public {
