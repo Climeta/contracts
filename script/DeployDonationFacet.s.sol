@@ -6,6 +6,7 @@ import "../src/ClimetaDiamond.sol";
 import "../src/facets/DonationFacet.sol";
 import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
+import "../src/interfaces/IDonation.sol";
 
 contract DeployDonationFacet is Script, DiamondHelper {
     uint256 deployerPrivateKey;
@@ -23,14 +24,11 @@ contract DeployDonationFacet is Script, DiamondHelper {
     }
 
     function run() public {
-        //read env variables and choose EOA for transaction signing
         vm.startBroadcast(deployerPrivateKey);
 
-        //deploy facets and init contract
         DonationFacet donationFacet = new DonationFacet();
         FacetCut[] memory cut = new FacetCut[](1);
 
-        // FacetCut array which contains the three standard facets to be added
         cut[0] = FacetCut ({
             facetAddress: address(donationFacet),
             action: FacetCutAction.Add,
@@ -38,9 +36,10 @@ contract DeployDonationFacet is Script, DiamondHelper {
         });
 
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
-        IDiamondCut climeta = IDiamondCut(climetaAddress);
 
+        IDiamondCut climeta = IDiamondCut(climetaAddress);
         climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IDonation).interfaceId, true);
 
         vm.stopBroadcast();
     }

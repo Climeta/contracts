@@ -138,5 +138,5 @@ abstract contract DiamondHelper is IDiamondCut, IDiamondLoupe, Test{
     function facetAddresses() external view returns (address[] memory facetAddresses_) {}
     function facetFunctionSelectors(address _facet) external view returns (bytes4[] memory facetFunctionSelectors_) {}
     function facets() external view returns (Facet[] memory facets_) {}
-
+    function diamondSetInterface(bytes4 _interfaceId, bool _status) external {}
 }

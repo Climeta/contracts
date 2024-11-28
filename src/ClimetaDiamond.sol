@@ -12,8 +12,6 @@ import { LibDiamond } from "./lib/LibDiamond.sol";
 import "./interfaces/IDiamondCut.sol";
 import {ClimetaStorage} from "./storage/ClimetaStorage.sol";
 import "./interfaces/IDiamondLoupe.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 struct DiamondArgs {
     address owner;
@@ -21,7 +19,7 @@ struct DiamondArgs {
     bytes initCalldata;
 }
 
-contract ClimetaDiamond is ERC1155Holder, ERC721Holder {
+contract ClimetaDiamond {
     ClimetaStorage internal s;
 
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {

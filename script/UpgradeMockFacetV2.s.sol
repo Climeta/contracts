@@ -7,6 +7,8 @@ import {MockFacet as MockFacetV1} from "../test/mocks/MockFacetV1.sol";
 import {MockFacet as MockFacetV2} from "../test/mocks/MockFacetV2.sol";
 import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
+import {IMockFacet as IMockFacetV1} from "../test/mocks/IMockFacetV1.sol";
+import {IMockFacet as IMockFacetV2} from "../test/mocks/IMockFacetV2.sol";
 
 contract DeployMockFacet is Script, DiamondHelper {
 
@@ -47,8 +49,10 @@ contract DeployMockFacet is Script, DiamondHelper {
 
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
-
         climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IMockFacetV1).interfaceId, false);
+        climeta.diamondSetInterface(type(IMockFacetV2).interfaceId, true);
+
         vm.stopBroadcast();
     }
 }

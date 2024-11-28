@@ -7,12 +7,19 @@ import {DeployAll} from "../../script/DeployAll.s.sol";
 import {DeployClimetaDiamond} from "../../script/DeployClimetaDiamond.s.sol";
 import {DeployMockFacet} from "../../script/DeployMockFacet.s.sol";
 import {DeployAdminFacet} from "../../script/DeployAdminFacet.s.sol";
+import {DeployDonationFacet} from "../../script/DeployDonationFacet.s.sol";
+import {DeployVotingFacet} from "../../script/DeployVotingFacet.s.sol";
 import {IMockFacet} from "../mocks/IMockFacetV1.sol";
 import {MockFacet as MockFacetV1} from "../mocks/MockFacetV1.sol";
 import {MockFacet as MockFacetV2} from "../mocks/MockFacetV2.sol";
+import {IMockFacet as IMockFacetV1} from "../mocks/IMockFacetV1.sol";
+import {IMockFacet as IMockFacetV2} from "../mocks/IMockFacetV2.sol";
 import {IOwnership} from "../../src/interfaces/IOwnership.sol";
 import {IDiamondLoupe} from "../../src/interfaces/IDiamondLoupe.sol";
 import {IAdmin} from "../../src/interfaces/IAdmin.sol";
+import {IDonation} from "../../src/interfaces/IDonation.sol";
+import {IVoting} from "../../src/interfaces/IVoting.sol";
+import {ClimetaDiamond} from "../../src/ClimetaDiamond.sol";
 import { LibDiamond } from "../../src/lib/LibDiamond.sol";
 import "../../src/utils/DiamondHelper.sol";
 import "../../src/interfaces/IDiamondCut.sol";
@@ -38,6 +45,21 @@ contract DiamondTest is Test, DiamondHelper {
 
     function test_SupportsInterfaces() public {
         assertTrue(IERC165(climeta).supportsInterface(type(IMockFacet).interfaceId));
+
+        assertFalse(IERC165(climeta).supportsInterface(type(IAdmin).interfaceId));
+        DeployAdminFacet adminDeployer = new DeployAdminFacet();
+        adminDeployer.run();
+        assertTrue(IERC165(climeta).supportsInterface(type(IAdmin).interfaceId));
+
+        assertFalse(IERC165(climeta).supportsInterface(type(IDonation).interfaceId));
+        DeployDonationFacet donationDeployer = new DeployDonationFacet();
+        donationDeployer.run();
+        assertTrue(IERC165(climeta).supportsInterface(type(IDonation).interfaceId));
+
+        assertFalse(IERC165(climeta).supportsInterface(type(IVoting).interfaceId));
+        DeployVotingFacet votingDeployer = new DeployVotingFacet();
+        votingDeployer.run();
+        assertTrue(IERC165(climeta).supportsInterface(type(IVoting).interfaceId));
     }
 
     function test_Upgrade() public {
@@ -66,6 +88,9 @@ contract DiamondTest is Test, DiamondHelper {
         assertEq(IDiamondLoupe(climeta).facetAddress(facets[3].functionSelectors[1]), facets[3].facetAddress);
         assertEq(IDiamondLoupe(climeta).facetAddress(facets[3].functionSelectors[2]), facets[3].facetAddress);
 
+
+        assertTrue(IERC165(climeta).supportsInterface(type(IMockFacetV1).interfaceId));
+
         ////////////// FACET UPGRADE //////////////////////
         vm.startPrank(admin);
         MockFacetV2 mockFacet = new MockFacetV2();
@@ -87,10 +112,17 @@ contract DiamondTest is Test, DiamondHelper {
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climetaDiamond = IDiamondCut(climetaAddress);
         climetaDiamond.diamondCut(cut, address(0), "0x");
+        climetaDiamond.diamondSetInterface(type(IMockFacetV1).interfaceId, false);
+        climetaDiamond.diamondSetInterface(type(IMockFacetV2).interfaceId, true);
         vm.stopPrank();
 
+        assertFalse(IERC165(climeta).supportsInterface(type(IMockFacetV1).interfaceId));
+        assertTrue(IERC165(climeta).supportsInterface(type(IMockFacetV2).interfaceId));
+
+
+
         facets = IDiamondLoupe(climeta).facets();
-        // Should be 4 facets - Cut, Loupe, Ownership and Mock still.
+        // Should be 4 facets - Cut, Loupe, Ownership and Mock.
         assertEq(facets.length, 4);
         // MockFacet is 4th entry in array and should have 3 functions, 2 get, 2 set and version.
         assertEq(facets[3].functionSelectors.length, 5);

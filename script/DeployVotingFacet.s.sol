@@ -6,6 +6,7 @@ import "../src/ClimetaDiamond.sol";
 import "../src/facets/VotingFacet.sol";
 import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
+import "../src/interfaces/IVoting.sol";
 
 contract DeployVotingFacet is Script, DiamondHelper {
     uint256 deployerPrivateKey;
@@ -25,11 +26,9 @@ contract DeployVotingFacet is Script, DiamondHelper {
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
 
-        //deploy facets and init contract
         VotingFacet votingFacet = new VotingFacet();
         FacetCut[] memory cut = new FacetCut[](1);
 
-        // FacetCut array which contains the three standard facets to be added
         cut[0] = FacetCut ({
             facetAddress: address(votingFacet),
             action: FacetCutAction.Add,
@@ -40,8 +39,9 @@ contract DeployVotingFacet is Script, DiamondHelper {
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
         bytes memory data = abi.encodeWithSignature("init()");
-
         climeta.diamondCut(cut, address(votingFacet), data);
-        vm.stopBroadcast();
+        climeta.diamondSetInterface(type(IVoting).interfaceId, true);
+
+            vm.stopBroadcast();
     }
 }

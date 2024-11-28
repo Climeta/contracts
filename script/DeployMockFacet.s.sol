@@ -7,7 +7,6 @@ import "../test/mocks/MockFacetV1.sol";
 import "../test/mocks/IMockFacetV1.sol";
 import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
-import {InterfaceInit} from "../src/utils/InterfaceInit.sol";
 
 contract DeployMockFacet is Script, DiamondHelper {
 
@@ -31,8 +30,6 @@ contract DeployMockFacet is Script, DiamondHelper {
 
         //deploy facets and init contract
         MockFacet mockFacet = new MockFacet();
-        InterfaceInit mockInit = new InterfaceInit();
-        bytes memory initCalldata = abi.encodeWithSignature("init(bytes4)", type(IMockFacet).interfaceId);
         FacetCut[] memory cut = new FacetCut[](1);
 
         // FacetCut array which contains the three standard facets to be added
@@ -44,8 +41,9 @@ contract DeployMockFacet is Script, DiamondHelper {
 
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
+        climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IMockFacet).interfaceId, true);
 
-        climeta.diamondCut(cut, address(mockInit), initCalldata);
         vm.stopBroadcast();
     }
 }

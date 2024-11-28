@@ -217,4 +217,9 @@ library LibDiamond {
         }
         require(contractSize > 0, _errorMessage);
     }
+
+    function setInterfaceSupported(bytes4 _interfaceId, bool _status) internal {
+        DiamondStorage storage ds = diamondStorage();
+        ds.supportedInterfaces[_interfaceId] = _status;
+    }
 }
