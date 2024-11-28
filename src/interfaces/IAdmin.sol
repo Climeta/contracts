@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
+/// @title IAdmin Climeta Admin Facet Standard
+///  Note: the ERC-165 identifier for this interface is 0xdc5d3022
 interface IAdmin {
     event Climeta__RewardWithdrawalTypeChange(bool value);
     event Climeta__TokenApproved(address _token);

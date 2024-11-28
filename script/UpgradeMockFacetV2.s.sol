@@ -2,16 +2,13 @@
 pragma solidity ^0.8.25;
 
 import "forge-std/Script.sol";
-import {ClimetaDiamond} from "../src/ClimetaDiamond.sol";
-import "../src/facets/AdminFacet.sol";
+import "../src/ClimetaDiamond.sol";
+import {MockFacet as MockFacetV1} from "../test/mocks/MockFacetV1.sol";
+import {MockFacet as MockFacetV2} from "../test/mocks/MockFacetV2.sol";
 import "../src/utils/DiamondHelper.sol";
-import {InterfaceInit} from "../src/utils/InterfaceInit.sol";
-import {IAdmin} from "../src/interfaces/IAdmin.sol";
 import "../src/interfaces/IDiamondCut.sol";
 
-contract DeployAdminFacet is Script, DiamondHelper {
-    uint256 public constant VOTING_REWARD = 600;
-    uint256 public constant VOTING_ROUND_REWARD = 60_000;
+contract DeployMockFacet is Script, DiamondHelper {
 
     uint256 deployerPrivateKey;
     address deployerAddress;
@@ -32,26 +29,26 @@ contract DeployAdminFacet is Script, DiamondHelper {
         vm.startBroadcast(deployerPrivateKey);
 
         //deploy facets and init contract
-        AdminFacet adminFacet = new AdminFacet();
-        InterfaceInit adminInit = new InterfaceInit();
-        bytes memory initCalldata = abi.encodeWithSignature("init(bytes4)", type(IAdmin).interfaceId);
-
+        MockFacetV2 upgradedMockFacet = new MockFacetV2();
         FacetCut[] memory cut = new FacetCut[](1);
 
-        // FacetCut array which contains the three standard facets to be added
+        // FacetCut array which contains the original facet to remove
         cut[0] = FacetCut ({
-            facetAddress: address(adminFacet),
+            facetAddress: address(0),
+            action: FacetCutAction.Remove,
+            functionSelectors: generateSelectors("test/mocks/MockFacetV1.sol:MockFacet")
+        });
+
+        cut[1] = FacetCut ({
+            facetAddress: address(upgradedMockFacet),
             action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("AdminFacet")
+            functionSelectors: generateSelectors("test/mocks/MockFacetV2.sol:MockFacet")
         });
 
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
-        climeta.diamondCut(cut, address(adminInit), initCalldata);
-
-        IAdmin(address(climeta)).setVoteReward(VOTING_REWARD);
-        IAdmin(address(climeta)).setVotingRoundReward(VOTING_ROUND_REWARD);
+        climeta.diamondCut(cut, address(0), "0x");
         vm.stopBroadcast();
     }
 }

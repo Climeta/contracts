@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
+/// @title IDonation Climeta Donation Facet Standard
+///  Note: the ERC-165 identifier for this interface is 0xa4f2fd5b
 interface IDonation {
     /// @notice Emitted when a donation is made
     /// @param _benefactor The address of the benefactor making the donation

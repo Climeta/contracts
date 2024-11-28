@@ -41,6 +41,7 @@ contract DeployDonationFacet is Script, DiamondHelper {
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
         climeta.diamondCut(cut, address(0), "0x");
+
         vm.stopBroadcast();
     }
 }

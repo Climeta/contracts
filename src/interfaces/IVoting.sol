@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
+/// @title IVoting Climeta Voting Facet Standard
+///  Note: the ERC-165 identifier for this interface is 0xa9092a14
 interface IVoting {
 
     /// @notice Emitted when a beneficiary's status is updated
