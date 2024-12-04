@@ -13,7 +13,7 @@ contract DeployDelMundoTrait is Script {
     }
 
     function run() external returns (address) {
-        address admin = vm.envAddress("OWNER_PUBLIC_KEY");
+        address admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
         DelMundoTrait delMundoTrait = new DelMundoTrait(admin);
         delMundoTrait = DelMundoTrait(address(delMundoTrait));
         return (address(delMundoTrait));

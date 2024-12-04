@@ -13,7 +13,7 @@ contract DeployDelMundo is Script {
     }
 
     function run() external returns (address) {
-        address admin = vm.envAddress("OWNER_PUBLIC_KEY");
+        address admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
         DelMundo delMundo = new DelMundo(admin);
         delMundo = DelMundo(address(delMundo));
         return (address(delMundo));
