@@ -54,8 +54,8 @@ contract VotingFacet is IVoting{
     function approveBeneficiary(address _beneficiary, bool _approved) external {
         LibDiamond.enforceIsContractOwner();
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
-        vs.approvedCharity[_beneficiary] = _approved;
         emit Climeta__BeneficiaryApproval(_beneficiary, _approved);
+        vs.approvedCharity[_beneficiary] = _approved;
     }
 
     function isBeneficiary(address _beneficiary) external view returns(bool) {
@@ -95,7 +95,7 @@ contract VotingFacet is IVoting{
         return vs.nextProposalId - 1;
     }
 
-    function getProposal(uint256 _proposalId) external returns(address, string memory) {
+    function getProposal(uint256 _proposalId) external view returns(address, string memory) {
         VotingStorage.VotingStruct storage vs = VotingStorage.votingStorage();
         return (vs.proposalOwner[_proposalId], vs.proposals[_proposalId]);
     }
@@ -113,6 +113,7 @@ contract VotingFacet is IVoting{
         if (vs.proposalVotingRound[_propId] > 0) {
             revert Climeta__AlreadyInRound();
         }
+        emit Climeta__ProposalChanged(_propId, _proposalURI);
         vs.proposals[_propId] = _proposalURI;
     }
 
@@ -138,7 +139,6 @@ contract VotingFacet is IVoting{
         vs.proposalVotingRound[_proposalId] = vs.votingRound;
         vs.votingRoundProposals[vs.votingRound].push(_proposalId);
     }
-
 
     /**
     * @dev Removal from voting round will be an exception use case, hence the less gas effective manner of removing as opposed to adding.
@@ -178,10 +178,10 @@ contract VotingFacet is IVoting{
         }
     }
 
-    function grantRaycognition (uint256 _delmundoId, uint256 _amount) public {
+    function grantRaycognition (uint256 _delmundoId, uint256 _amount) external {
         LibDiamond.enforceIsContractOwner();
         emit Climeta__RaycognitionGranted(_delmundoId, _amount);
-        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, '0x', block.chainid, s.delMundoAddress, _delmundoId);
+        address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, 0, block.chainid, s.delMundoAddress, _delmundoId);
         Raycognition(s.raycognitionAddress).mint(delmundoWallet, _amount);
     }
 
@@ -294,7 +294,8 @@ contract VotingFacet is IVoting{
         if (amountETH > 0) {
             vs.withdrawals[msg.sender] = 0;
             emit Climeta__Payout(msg.sender, amountETH);
-            payable(msg.sender).call{value: amountETH}("");
+            (bool success,) = payable(msg.sender).call{value: amountETH}("");
+            require(success, "Failed to send ETH");
         }
     }
 
@@ -327,7 +328,8 @@ contract VotingFacet is IVoting{
         if (amountETH > 0) {
             vs.withdrawals[_beneficiary] = 0;
             emit Climeta__Payout(_beneficiary, amountETH);
-            payable(_beneficiary).call{value: amountETH}("");
+            (bool success,) = payable(_beneficiary).call{value: amountETH}("");
+            require(success, "Failed to send ETH");
         }
     }
 
@@ -338,12 +340,12 @@ contract VotingFacet is IVoting{
     * This is currently set to 10% at time of writing. The remaining 90% is then split based on the number of votes each proposal received.
     *
     * The actual funds are not actually sent out from this function though. What we do is add in what each beneficiary can withdraw
-    * and add this to the s_withdrawls mapping. This is then pulled out by the beneficiary themselves. There is also an admin only function
+    * and add this to the s_withdrawals mapping. This is then pulled out by the beneficiary themselves. There is also an admin only function
     * which allows Climeta to push the funds individually from this contract to the beneficiary as a failsafe.
     *
     * The whole fund amount is allocated at this point, there should be nothing left.
     *
-    * Going forwards this will become less centralised and more automated via timeboxing and other mechanisms, but for now
+    * Going forwards this will become less centralised and more automated via time-boxing and other mechanisms, but for now
     * is fully under the control of Climeta.
     *
     * Once the voting round is concluded, the voting round counter is incremented and we begin again.
@@ -395,6 +397,7 @@ contract VotingFacet is IVoting{
             }
         }
         processRewards(totalVotes);
+        emit Climeta__VotingRoundEnded(m_votingRound);
         vs.votingRound++;
     }
 
@@ -428,14 +431,13 @@ contract VotingFacet is IVoting{
                 uint256 raycognition = Raycognition(s.raycognitionAddress).balanceOf(delmundoWallet);
                 address delmundoOwner = IRayWallet(payable(delmundoWallet)).owner();
 
-                // Formula for Raywards = 50% split across all voters and rest split by proportion of raycognition
+                // Formula for Raywards = 50% split across all voters and rest split by proportion of Raycognition
                 uint256 rewards = 0;
                 if (totalCognition == 0) {
                     rewards = totalRaywardsToSplit / _totalVotes;
                 } else {
                     rewards = ((totalRaywardsToSplit / 2) / _totalVotes);
                 }
-                uint256 raycogAmount = 0;
                 // Calc raycog bonus
                 if (totalCognition > 0 && raycognition > 0) {
                     rewards += (totalRaywardsToSplit / 2) * (raycognition/totalCognition);
@@ -459,7 +461,7 @@ contract VotingFacet is IVoting{
 
         if (amount > 0) {
             rs.claimableRaywards[msg.sender] = 0;
-            emit Climeta__RewardClaimed(msg.sender, amount);
+            emit Climeta__RaywardClaimed(msg.sender, amount);
             Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, msg.sender, amount);
         }
     }

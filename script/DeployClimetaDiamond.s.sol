@@ -25,16 +25,29 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
         run();
     }
 
+    struct Addresses {
+        address _delMundoAddress;
+        address _delMundoTraitAddress;
+        address _raywardAddress;
+        address _raycognitionAddress;
+        address _raywalletAddress;
+        address _delmundowalletAddress;
+        address _registryAddress;
+        address _ops;
+    }
+
     function run() public returns (address) {
 
+        Addresses memory addresses;
         //read env variables and choose EOA for transaction signing
-        address _delMundoAddress = vm.envAddress("DELMUNDO_ADDRESS");
-        address _raywardAddress = vm.envAddress("RAYWARD_ADDRESS");
-        address _raycognitionAddress = vm.envAddress("RAYCOGNITION_ADDRESS");
-        address _raywalletAddress = vm.envAddress("RAYWALLET_ADDRESS");
-        address _delmundowalletAddress = vm.envAddress("DELMUNDOWALLET_ADDRESS");
-        address _registryAddress = vm.envAddress("REGISTRY_ADDRESS");
-        address _ops = vm.envAddress("OPS_TREASURY_ADDRESS");
+        addresses._delMundoAddress = vm.envAddress("DELMUNDO_ADDRESS");
+        addresses._delMundoTraitAddress = vm.envAddress("DELMUNDOTRAIT_ADDRESS");
+        addresses._raywardAddress = vm.envAddress("RAYWARD_ADDRESS");
+        addresses._raycognitionAddress = vm.envAddress("RAYCOGNITION_ADDRESS");
+        addresses._raywalletAddress = vm.envAddress("RAYWALLET_ADDRESS");
+        addresses._delmundowalletAddress = vm.envAddress("DELMUNDOWALLET_ADDRESS");
+        addresses._registryAddress = vm.envAddress("REGISTRY_ADDRESS");
+        addresses._ops = vm.envAddress("OPS_TREASURY_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -49,7 +62,7 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
         DiamondArgs memory _args = DiamondArgs({
             owner: deployerAddress,
             init: address(diamondInit),
-            initCalldata: abi.encodeWithSignature("init(address,address,address,address,address,address,address)", _delMundoAddress, _raywardAddress, _raycognitionAddress, _delmundowalletAddress, _raywalletAddress, _registryAddress, _ops)
+            initCalldata: abi.encodeWithSignature("init(address,address,address,address,address,address,address,address)", addresses._delMundoAddress, addresses._raywardAddress, addresses._raycognitionAddress, addresses._delmundowalletAddress, addresses._raywalletAddress, addresses._registryAddress, addresses._ops, addresses._delMundoTraitAddress)
         });
 
         // FacetCut array which contains the three standard facets to be added
@@ -82,7 +95,7 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
 
         // Add diamond address where it needs to be
         // Raycognition has Climeta as a minter for granting raywards
-        Raycognition(_raycognitionAddress).grantMinter(address(diamond));
+        Raycognition(addresses._raycognitionAddress).grantMinter(address(diamond));
         console.log("CLIMETA_ADDRESS=", address(diamond));
         vm.stopBroadcast();
 

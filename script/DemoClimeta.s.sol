@@ -13,13 +13,9 @@ contract DemoClimeta is Script {
     function run() external {
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         uint256 brand1 = vm.envUint("ANVIL_BRAND1_PRIVATE_KEY");
-        address brand1Addr = vm.envAddress("ANVIL_BRAND1_PUBLIC_KEY");
-        uint256 charity1 = vm.envUint("ANVIL_CHARITY1_PRIVATE_KEY");
         address charity1Addr = vm.envAddress("ANVIL_CHARITY1_PUBLIC_KEY");
-        uint256 charity2 = vm.envUint("ANVIL_CHARITY2_PRIVATE_KEY");
         address charity2Addr = vm.envAddress("ANVIL_CHARITY2_PUBLIC_KEY");
         uint256 owner = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address ownerAddr = vm.envAddress("DEPLOYER_PUBLIC_KEY");
 
         IDonation climetaDonation = IDonation(climetaAddress);
 

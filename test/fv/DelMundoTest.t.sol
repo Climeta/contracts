@@ -14,7 +14,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
     event minted(uint256 indexed tokenId, string tokenURI, address ownerAddress);
 
-
     DelMundo private delMundo;
     uint256 private tokenIdToTest = 0;
     address payable private treasury;

@@ -12,8 +12,6 @@ import { LibDiamond } from "./lib/LibDiamond.sol";
 import "./interfaces/IDiamondCut.sol";
 import {ClimetaStorage} from "./storage/ClimetaStorage.sol";
 import "./interfaces/IDiamondLoupe.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 struct DiamondArgs {
     address owner;
@@ -21,14 +19,12 @@ struct DiamondArgs {
     bytes initCalldata;
 }
 
-contract ClimetaDiamond is ERC1155Holder, ERC721Holder {
+contract ClimetaDiamond {
     ClimetaStorage internal s;
 
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
         LibDiamond.setContractOwner(_args.owner);
         LibDiamond.diamondCut(_diamondCut, _args.init, _args.initCalldata);
-
-        // Code can be added here to perform actions and set state variables.
     }
 
     // Find facet for function that is called and execute the

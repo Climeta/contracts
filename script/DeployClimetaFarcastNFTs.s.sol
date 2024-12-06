@@ -14,6 +14,7 @@ contract DeployClimetaTokens is Script {
         vm.startBroadcast(deployerPrivateKey);
         ClimetaFarcasterNFTs nft = new ClimetaFarcasterNFTs(owner, "");
         ClimetaTokens tokens = new ClimetaTokens(owner, "");
+        console.log("CLIMETA_FACRACSTER_NFT_ADDRESS=", address(nft));
         console.log("CLIMETA_NFTS_ADDRESS=", address(tokens));
         vm.stopBroadcast();
 

@@ -9,7 +9,7 @@ import {IDiamondLoupe} from "../src//interfaces/IDiamondLoupe.sol";
 
 contract QueryClimeta is Script {
 
-    function run() external {
+    function run() external view {
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondLoupe climeta = IDiamondLoupe(climetaAddress);
         console.log("Climeta address", address(climeta));

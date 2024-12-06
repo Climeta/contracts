@@ -2,9 +2,10 @@
 pragma solidity ^0.8.25;
 
 import "forge-std/Script.sol";
-import "../src/ClimetaDiamond.sol";
+import {ClimetaDiamond} from "../src/ClimetaDiamond.sol";
 import "../src/facets/AdminFacet.sol";
 import "../src/utils/DiamondHelper.sol";
+import {IAdmin} from "../src/interfaces/IAdmin.sol";
 import "../src/interfaces/IDiamondCut.sol";
 
 contract DeployAdminFacet is Script, DiamondHelper {
@@ -26,14 +27,12 @@ contract DeployAdminFacet is Script, DiamondHelper {
     }
 
     function run() public {
-        //read env variables and choose EOA for transaction signing
         vm.startBroadcast(deployerPrivateKey);
 
-        //deploy facets and init contract
         AdminFacet adminFacet = new AdminFacet();
+
         FacetCut[] memory cut = new FacetCut[](1);
 
-        // FacetCut array which contains the three standard facets to be added
         cut[0] = FacetCut ({
             facetAddress: address(adminFacet),
             action: FacetCutAction.Add,
@@ -44,9 +43,10 @@ contract DeployAdminFacet is Script, DiamondHelper {
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
         climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IAdmin).interfaceId, true);
 
-        AdminFacet(address(climeta)).setVoteReward(VOTING_REWARD);
-        AdminFacet(address(climeta)).setVotingRoundReward(VOTING_ROUND_REWARD);
+        IAdmin(address(climeta)).setVoteReward(VOTING_REWARD);
+        IAdmin(address(climeta)).setVotingRoundReward(VOTING_ROUND_REWARD);
         vm.stopBroadcast();
     }
 }

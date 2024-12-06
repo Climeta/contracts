@@ -27,4 +27,9 @@ contract DiamondCutFacet is IDiamondCut {
         LibDiamond.enforceIsContractOwner();
         LibDiamond.diamondCut(_diamondCut, _init, _calldata);
     }
+
+    function diamondSetInterface(bytes4 _interfaceId, bool _status) external {
+        LibDiamond.enforceIsContractOwner();
+        LibDiamond.setInterfaceSupported(_interfaceId, _status);
+    }
 }

@@ -1,0 +1,5 @@
+@openzeppelin/contracts=lib/openzeppelin-contracts/contracts
+@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts
+@tokenbound/contracts=lib/tokenbound/src
+@tokenbound/erc6551=lib/tokenbound/lib/erc6551/src
+

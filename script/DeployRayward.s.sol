@@ -8,7 +8,7 @@ import {Rayward} from "../src/token/Rayward.sol";
 contract DeployRayward is Script {
 
     function run() external returns (address) {
-        address admin = vm.envAddress("OWNER_PUBLIC_KEY");
+        address admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
         Rayward rayward = new Rayward(admin);
         return (address(rayward));
     }

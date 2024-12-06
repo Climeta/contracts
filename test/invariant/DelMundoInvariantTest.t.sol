@@ -39,7 +39,7 @@ contract DelMundoInvariantTest is Test, IERC721Receiver {
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
-    function statefulFuzz_DelMundo() public {
+    function statefulFuzz_DelMundo() public view {
         assert(delMundo.totalSupply() <= handler.VOUCHER_NUMBER());
     }
 

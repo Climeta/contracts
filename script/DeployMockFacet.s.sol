@@ -3,12 +3,13 @@ pragma solidity ^0.8.25;
 
 import "forge-std/Script.sol";
 import "../src/ClimetaDiamond.sol";
-import "../src/facets/VotingFacet.sol";
+import "../test/mocks/MockFacetV1.sol";
+import "../test/mocks/IMockFacetV1.sol";
 import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
-import "../src/interfaces/IVoting.sol";
 
-contract DeployVotingFacet is Script, DiamondHelper {
+contract DeployMockFacet is Script, DiamondHelper {
+
     uint256 deployerPrivateKey;
     address deployerAddress;
 
@@ -24,24 +25,25 @@ contract DeployVotingFacet is Script, DiamondHelper {
     }
 
     function run() public {
+        //read env variables and choose EOA for transaction signing
         vm.startBroadcast(deployerPrivateKey);
 
-        VotingFacet votingFacet = new VotingFacet();
+        //deploy facets and init contract
+        MockFacet mockFacet = new MockFacet();
         FacetCut[] memory cut = new FacetCut[](1);
 
+        // FacetCut array which contains the three standard facets to be added
         cut[0] = FacetCut ({
-            facetAddress: address(votingFacet),
+            facetAddress: address(mockFacet),
             action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("VotingFacet")
+            functionSelectors: generateSelectors("test/mocks/MockFacetV1.sol:MockFacet")
         });
 
         address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
+        climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IMockFacet).interfaceId, true);
 
-        bytes memory data = abi.encodeWithSignature("init()");
-        climeta.diamondCut(cut, address(votingFacet), data);
-        climeta.diamondSetInterface(type(IVoting).interfaceId, true);
-
-            vm.stopBroadcast();
+        vm.stopBroadcast();
     }
 }

@@ -7,27 +7,29 @@ import {LibDiamond} from "../lib/LibDiamond.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
-contract BoutiqueFacet {
+contract BoutiqueFacet is ERC1155Holder, ERC721Holder {
     ClimetaStorage internal s;
 
     constructor(){
     }
 
-    uint256 constant ERC721 = 721;
-    uint256 constant ERC1155 = 1155;
+    /// @notice Returns the version of the contract
+    /// @return The version of the contract
+    /// @dev This function will change when the implementation changes
+    function boutiqueFacetVersion() external pure returns (string memory) {
+        return "1.0";
+    }
+
+    uint256 public constant ERC721 = 721;
+    uint256 public constant ERC1155 = 1155;
 
     function addCollection(address _collection) external {
         LibDiamond.enforceIsContractOwner();
         BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
         bs.collections.push(_collection);
-    }
-
-    function removeCollection(address _collection) external {
-        LibDiamond.enforceIsContractOwner();
-        BoutiqueStorage.BoutiqueStruct storage bs = BoutiqueStorage.boutiqueStorage();
-        // TODO remove from array code
-        //bs.collections.pop();
     }
 
     function addERC721Item(address _collection, uint256 _tokenId, uint256 _priceRaywards, uint256 _priceEth) external {

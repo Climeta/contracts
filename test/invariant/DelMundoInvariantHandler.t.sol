@@ -15,9 +15,9 @@ contract DelMundoHandler is Test, EIP712 {
     string private constant SIGNATURE_VERSION = "1";
     DelMundo private delMundo;
 
-    uint256 constant MAX_SUPPLY = 1000;
+    uint256 constant MAX_SUPPLY = 100;
     uint256 constant MAX_PER_WALLET = 20;
-    uint256 public constant VOUCHER_NUMBER = 1000;
+    uint256 public constant VOUCHER_NUMBER = 100;
     address private admin;
     uint256 private adminPk;
 
@@ -44,8 +44,6 @@ contract DelMundoHandler is Test, EIP712 {
             address(delMundo)
         ));
         VoucherData memory voucherData;
-        address current = address(this);
-        DelMundo.NFTVoucher memory cleanVoucher;
         bytes32 dataEncoded;
         bytes32 digest;
         DelMundo.NFTVoucher memory voucher;
