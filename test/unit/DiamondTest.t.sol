@@ -9,11 +9,12 @@ import {DeployMockFacet} from "../../script/DeployMockFacet.s.sol";
 import {DeployAdminFacet} from "../../script/DeployAdminFacet.s.sol";
 import {DeployDonationFacet} from "../../script/DeployDonationFacet.s.sol";
 import {DeployVotingFacet} from "../../script/DeployVotingFacet.s.sol";
-import {IMockFacet} from "../mocks/IMockFacetV1.sol";
 import {MockFacet as MockFacetV1} from "../mocks/MockFacetV1.sol";
 import {MockFacet as MockFacetV2} from "../mocks/MockFacetV2.sol";
+import {MockFacet as MockFacetV3} from "../mocks/MockFacetV3.sol";
 import {IMockFacet as IMockFacetV1} from "../mocks/IMockFacetV1.sol";
 import {IMockFacet as IMockFacetV2} from "../mocks/IMockFacetV2.sol";
+import {IMockFacet as IMockFacetV3} from "../mocks/IMockFacetV3.sol";
 import {IOwnership} from "../../src/interfaces/IOwnership.sol";
 import {IDiamondLoupe} from "../../src/interfaces/IDiamondLoupe.sol";
 import {IAdmin} from "../../src/interfaces/IAdmin.sol";
@@ -44,7 +45,7 @@ contract DiamondTest is Test, DiamondHelper {
     }
 
     function test_SupportsInterfaces() public {
-        assertTrue(IERC165(climeta).supportsInterface(type(IMockFacet).interfaceId));
+        assertTrue(IERC165(climeta).supportsInterface(type(IMockFacetV1).interfaceId));
 
         assertFalse(IERC165(climeta).supportsInterface(type(IAdmin).interfaceId));
         DeployAdminFacet adminDeployer = new DeployAdminFacet();
@@ -93,7 +94,7 @@ contract DiamondTest is Test, DiamondHelper {
 
         ////////////// FACET UPGRADE //////////////////////
         vm.startPrank(admin);
-        MockFacetV2 mockFacet = new MockFacetV2();
+        MockFacetV2 mockFacetv2 = new MockFacetV2();
         FacetCut[] memory cut = new FacetCut[](2);
 
         // FacetCut array which contains the original facet to remove
@@ -104,7 +105,7 @@ contract DiamondTest is Test, DiamondHelper {
         });
 
         cut[1] = FacetCut ({
-            facetAddress: address(mockFacet),
+            facetAddress: address(mockFacetv2),
             action: FacetCutAction.Add,
             functionSelectors: generateSelectors("test/mocks/MockFacetV2.sol:MockFacet")
         });
@@ -119,14 +120,11 @@ contract DiamondTest is Test, DiamondHelper {
         assertFalse(IERC165(climeta).supportsInterface(type(IMockFacetV1).interfaceId));
         assertTrue(IERC165(climeta).supportsInterface(type(IMockFacetV2).interfaceId));
 
-
-
         facets = IDiamondLoupe(climeta).facets();
         // Should be 4 facets - Cut, Loupe, Ownership and Mock.
         assertEq(facets.length, 4);
         // MockFacet is 4th entry in array and should have 3 functions, 2 get, 2 set and version.
         assertEq(facets[3].functionSelectors.length, 5);
-
 
         assertEq(MockFacetV1(climeta).mockFacetVersion(), "2.0");
         assertEq(MockFacetV2(climeta).mockFacetVersion(), "2.0");
@@ -138,6 +136,35 @@ contract DiamondTest is Test, DiamondHelper {
 
         assertEq(MockFacetV2(climeta).getMockValueMapping2(1), 150);
         assertEq(MockFacetV2(climeta).getMockValueMapping1(1), 2000);
+        vm.stopPrank();
+
+        ////////////// FACET UPGRADE2 //////////////////////
+
+        // Add a new facet inbetween upgrades test
+        DeployAdminFacet adminDeployer = new DeployAdminFacet();
+        adminDeployer.run();
+
+        vm.startPrank(admin);
+        MockFacetV3 mockFacetv3 = new MockFacetV3();
+        FacetCut[] memory cut2 = new FacetCut[](2);
+
+        // FacetCut array which contains the original facet to remove
+        cut2[0] = FacetCut ({
+            facetAddress: address(0),
+            action: FacetCutAction.Remove,
+            functionSelectors: generateSelectors("test/mocks/MockFacetV2.sol:MockFacet")
+        });
+
+        cut2[1] = FacetCut ({
+            facetAddress: address(mockFacetv3),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("test/mocks/MockFacetV3.sol:MockFacet")
+        });
+
+        climetaDiamond.diamondCut(cut2, address(0), "0x");
+        climetaDiamond.diamondSetInterface(type(IMockFacetV2).interfaceId, false);
+        climetaDiamond.diamondSetInterface(type(IMockFacetV3).interfaceId, true);
+        vm.stopPrank();
 
 
 

@@ -32,7 +32,7 @@ contract DelMundoTrait is ERC1155Supply, Ownable {
 
     function uri(uint256 tokenId) public view override returns (string memory) {
         return tokenURIs[tokenId].uri;
-    }
+        }
 
     function maxSupply(uint256 tokenId) public view returns (uint256) {
         return tokenURIs[tokenId].maxSupply;

@@ -124,24 +124,55 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
 
     function test_CreateNewTrait() public {
         string memory trait1URI = "Trait 1 URI";
+        string memory trait2URI = "Trait 2 URI";
 
         // ensure only admin can set new values
         vm.prank(actors.user1);
         vm.expectRevert();
         delMundoTrait.setURI(1, trait1URI, 1_000);
+        vm.prank(actors.user1);
+        vm.expectRevert();
+        delMundoTrait.mint(actors.user1, 1, "0x");
 
         // Create a new trait with 1000 supply
         vm.prank(actors.admin);
         delMundoTrait.setURI(1, trait1URI, 1_000);
+        assertEq(delMundoTrait.maxSupply(1), 1_000);
         assertEq(delMundoTrait.uri(1), trait1URI);
 
-        vm.prank(actors.admin);
+        // ensure non admin can't mint a configured pre mint token
+        vm.prank(actors.user1);
+        vm.expectRevert();
+        delMundoTrait.mint(actors.user1, 1, "0x");
+
         // Test can change before one is minted
-        delMundoTrait.setURI(1, trait1URI, 10_000);
+        vm.startPrank(actors.admin);
+        delMundoTrait.setURI(1, trait1URI, 2_000);
+        assertEq(delMundoTrait.maxSupply(1), 2_000);
+        delMundoTrait.mint(actors.admin, 1, "0x");
+        assertEq(delMundoTrait.balanceOf(actors.admin, 1), 2_000);
+        assertEq(delMundoTrait.maxSupply(1), 2_000);
 
-        
+        vm.expectRevert();
+        vm.expectRevert(DelMundoTrait.DelMundoTraits__AlreadyMinted.selector);
+        delMundoTrait.mint(actors.admin, 1, "0x");
+        vm.expectRevert(DelMundoTrait.DelMundoTraits__AlreadyMinted.selector);
+        delMundoTrait.setURI(1, trait1URI, 1_000);
+        assertEq(delMundoTrait.maxSupply(1), 2_000);
+        vm.stopPrank();
 
+        vm.startPrank(actors.admin);
+        vm.expectRevert(DelMundoTrait.DelMundoTraits__TokenNotConfigured.selector);
+        delMundoTrait.mint(actors.admin, 2, "0x");
+        vm.expectRevert(DelMundoTrait.DelMundoTraits__TokenNotConfigured.selector);
+        delMundoTrait.mint(actors.admin, 0, "0x");
+        vm.expectRevert(DelMundoTrait.DelMundoTraits__TokenNotConfigured.selector);
+        delMundoTrait.mint(actors.admin, 200, "0x");
 
+        delMundoTrait.setURI(2, trait2URI, 10_000);
+        delMundoTrait.mint(actors.user1, 2, "0x");
+        assertEq(delMundoTrait.balanceOf(actors.user1, 2), 10_000);
+        assertEq(delMundoTrait.maxSupply(2), 10_000);
     }
 
 }
