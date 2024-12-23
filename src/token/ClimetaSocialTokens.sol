@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ClimetaTokens is ERC1155, ERC1155URIStorage,  Ownable {
+contract ClimetaSocialTokens is ERC1155, ERC1155URIStorage,  Ownable {
     mapping(uint256 => address[]) public minters;
     mapping(uint256 => bool) public releasedTokens;
     mapping(uint256 => mapping (address => bool)) public hasMinted;

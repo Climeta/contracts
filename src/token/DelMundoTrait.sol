@@ -62,13 +62,13 @@ contract DelMundoTrait is ERC1155Supply, Ownable {
 
     function _update(address from, address to, uint256[] memory ids, uint256[] memory values) internal override {
         // Restrict transfers if DelMundo is wearing the trait
-        try RayWallet(from).iAmADelMundoWallet() {
-            uint256 tokenId = RayWallet(from).token();
+        try RayWallet(payable(from)).iAmADelMundoWallet() {
+            (uint256 tokenId,,) = RayWallet(payable(from)).token();
 
             // Loop through all transfers and determine if the DelMundo is wearing it and disallow transfer of the last item
             for (uint256 i = 0; i < ids.length; i++) {
                 // Checking = rather than <= as < needs to result in a different error (ie don't have that amount to transfer anyway)
-                if (isDelMundoWearing(tokenId, ids[i]) && balanceOf(from, ids[i] = values[i])  ) {
+                if (isDelMundoWearing(tokenId, ids[i]) && (balanceOf(from, ids[i]) == values[i])  ) {
                     revert DelMundoTraits__TraitInUse();
                 }
             }

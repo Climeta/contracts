@@ -10,7 +10,16 @@ solc_version = "0.8.25"
 evm_version = "cancun"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
-remappings = ["@openzeppelin/contracts=lib/openzeppelin-contracts/contracts","@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts","@tokenbound/contracts=lib/tokenbound/src","@tokenbound/erc6551=lib/tokenbound/lib/erc6551/src"]
+remappings = [
+    "@openzeppelin/contracts=lib/openzeppelin-contracts/contracts",
+    "@openzeppelin4/contracts=lib/v3-periphery/lib/openzeppelin-contracts/contracts",
+    "@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts",
+    "@tokenbound/contracts=lib/tokenbound/src",
+    "@tokenbound/erc6551=lib/tokenbound/lib/erc6551/src",
+    "@uniswap/swap-router-contracts=lib/swap-router-contracts/",
+    "@uniswap/v3-core=lib/v3-core/",
+    "@uniswap/v3-periphery=lib/v3-periphery/"
+    ]
 
 [fuzz]
 runs = 100
@@ -25,3 +34,4 @@ fail_on_revert = false
 anvil="${ANVIL_RPC_URL}"
 base_mainnet="${BASE_MAINNET_RPC}"
 base_sepolia="${BASE_SEPOLIA_RPC}"
+

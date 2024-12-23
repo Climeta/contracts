@@ -49,7 +49,8 @@ The Diamond pattern was chosen for 2 main reasons.
 
 Install foundry using foundryup. 
 
-Install the contract dependencies:
+Install the contract dependencies. For Climeta we use openzeppelin and tokenbound libraries for the ERC6551 wallets and their registry as well as uniswap v4 for the marketplace.
+You need to have github ssh access setup for this to work properly.
 
 ```bash
 forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit
@@ -57,12 +58,16 @@ forge install OpenZeppelin/openzeppelin-contracts --no-commit
 forge install tokenbound=tokenbound/contracts --no-commit
 forge install tokenbound=tokenbound/erc6551 --no-commit
 forge install OpenZeppelin/openzeppelin-foundry-upgrades --no-commit
+forge install uniswap/v4-core --no-commit
+forge install uniswap/v4-periphery --no-commit
+forge install uniswap/permit2 --no-commit
+forge install uniswap/universal-router --no-commit
 ```
 
 Then add in the remappings in foundry.toml
 
 ```toml
-remappings = ["@openzeppelin/contracts=lib/openzeppelin-contracts/contracts","@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts","@tokenbound/contracts=lib/tokenbound/src","@tokenbound/erc6551=lib/tokenbound/lib/erc6551/src"]
+remappings = ["@openzeppelin/contracts=lib/openzeppelin-contracts/contracts","@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts","@tokenbound/contracts=lib/tokenbound/src","@tokenbound/erc6551=lib/tokenbound/lib/erc6551/src","@uniswap/v4-core/=lib/v4-core/","@uniswap/v4-periphery/=lib/v4-periphery/","@uniswap/permit2/=lib/permit2/","@uniswap/universal-router/=lib/universal-router/","@openzeppelin/contracts/=lib/openzeppelin-contracts/"]
 ```
 
 ## Style Guide
