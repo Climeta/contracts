@@ -34,6 +34,10 @@ contract AdminFacet is IAdmin {
     function getDelMundoWalletAddress() external view returns(address)  {
         return s.delMundoWalletAddress;
     }
+    /// @notice gets the LP address on Uniswap v4 for the Raywards/USDX pool.
+    function getLiquidityPoolAddress() external view returns(address)  {
+        return s.liquidityPoolAddress;
+    }
     /// @notice gets the Rayward contract address.
     function getRaywardAddress() external view returns(address)  {
         return s.raywardAddress;
@@ -92,6 +96,13 @@ contract AdminFacet is IAdmin {
         LibDiamond.enforceIsContractOwner();
         emit Climeta__RewardWithdrawalTypeChange(_withdrawRewardOnly);
         s.withdrawRewardsOnly = _withdrawRewardOnly;
+    }
+    /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
+    /// @param _lp The liquidity pool address of the Rayward/Stablecoin pair
+    function setLiquidityPoolAddress(address _lp) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__LiquidityPoolAddressChanged(_lp);
+        s.liquidityPoolAddress = _lp;
     }
 
 

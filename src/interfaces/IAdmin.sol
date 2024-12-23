@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 /// @title IAdmin Climeta Admin Facet Standard
 ///  Note: the ERC-165 identifier for this interface is 0xdc5d3022
 interface IAdmin {
+    event Climeta__LiquidityPoolAddressChanged(address _lp);
     event Climeta__RewardWithdrawalTypeChange(bool value);
     event Climeta__TokenApproved(address _token);
     event Climeta__TokenRevoked(address _token);
@@ -18,6 +19,7 @@ interface IAdmin {
     function getDelMundoAddress() external view returns(address);
     function getDelMundoTraitAddress() external view returns(address);
     function getDelMundoWalletAddress() external view returns(address);
+    function getLiquidityPoolAddress() external view returns(address);
     function getOpsTreasuryAddress() external view returns(address);
     function getRaycognitionAddress() external view returns(address);
     function getRayWalletAddress() external view returns(address);
@@ -27,6 +29,7 @@ interface IAdmin {
     function getVoteReward() external view returns (uint256);
     function getVotingRoundReward() external view returns (uint256);
     function removeAllowedToken(address _token) external;
+    function setLiquidityPoolAddress(address _lp) external;
     function setVoteRaycognition(uint256 _rewardAmount) external;
     function setVoteReward(uint256 _rewardAmount) external;
     function setVotingRoundReward(uint256 _rewardAmount) external;

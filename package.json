@@ -20,6 +20,7 @@
     "hardhat": "^2.22.4"
   },
   "dependencies": {
+    "@uniswap/swap-router-contracts": "^1.1.0",
     "bignumber.js": "^9.1.2",
     "diamond-util": "^1.1.1",
     "diamond-utils": "^1.0.3",

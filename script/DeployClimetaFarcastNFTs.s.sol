@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import { Script, console } from "forge-std/Script.sol";
 import {ClimetaFarcasterNFTs} from "../src/token/ClimetaFarcasterNFTs.sol";
-import {ClimetaTokens} from "../src/token/ClimetaTokens.sol";
+import {ClimetaSocialTokens} from "../src/token/ClimetaSocialTokens.sol";
 
 contract DeployClimetaTokens is Script {
 
@@ -13,7 +13,7 @@ contract DeployClimetaTokens is Script {
 
         vm.startBroadcast(deployerPrivateKey);
         ClimetaFarcasterNFTs nft = new ClimetaFarcasterNFTs(owner, "");
-        ClimetaTokens tokens = new ClimetaTokens(owner, "");
+        ClimetaSocialTokens tokens = new ClimetaSocialTokens(owner, "");
         console.log("CLIMETA_FACRACSTER_NFT_ADDRESS=", address(nft));
         console.log("CLIMETA_NFTS_ADDRESS=", address(tokens));
         vm.stopBroadcast();

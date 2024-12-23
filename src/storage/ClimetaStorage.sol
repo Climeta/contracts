@@ -11,6 +11,14 @@ struct ClimetaStorage {
     address raycognitionAddress;
     address opsTreasuryAddress;
     address registryAddress;
+    address treasuryStablecoin;
+
+    // Uniswap v4 addresses
+    address liquidityPoolAddress;
+    address uniswapRouter;
+    uint24 uniswapPoolFee;
+    uint48 approvalExpirationTime;
+
     // Raycognisiton
     uint256 voteRaycognitionAmount;
     address[] allowedTokens;
@@ -27,14 +35,5 @@ struct ClimetaStorage {
     uint256 totalETHToProjects;
     // list of charity addresses and their ETH balances
     mapping(address => uint256) totalTokenToProjects;
-
-    // Charities + Brands
-    // Mapping to hold the beneficiary address and the data -
-    // TODO do we map charity by an id or by an address?
-    // do we just use addresses and map those in database?
-    // the proposal will be an id and metadata and a charity address for withdrawal...
-    // Need an id, metadata and a possible list of addresses with a currentAddress
-    //mapping(address => Beneficiary) beneficiaries;
-
 
 }
