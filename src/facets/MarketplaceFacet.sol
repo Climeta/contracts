@@ -79,7 +79,7 @@ contract MarketplaceFacet is ERC1155Holder, ERC721Holder, IMarketplace {
             revert Climeta__MarketplaceNotEnoughEth();
         }
 
-        emit Climeta__ERC721ItemSold(_collection, _tokenId, msg.sender);
+        emit Climeta__ItemSold(_collection, _tokenId, msg.sender);
         bs.erc721Items[_collection][_tokenId] = false;
 
         // Process ETH payments
@@ -113,14 +113,16 @@ contract MarketplaceFacet is ERC1155Holder, ERC721Holder, IMarketplace {
             revert Climeta__MarketplaceRaywardsTransferFailed();
         }
         // Convert remaining Raywards to StableCoin for funding treasury
-        uint256 amountStableToTreasury = swapExactInputSingle(amountToTreasury);
-        emit Climeta__MarketplaceTreasuryDonation(msg.sender, _collection, _tokenId, amountStableToTreasury);
+        if (amountToTreasury > 0) {
+            uint256 amountStableToTreasury = swapExactInputSingle(amountToTreasury);
+            emit Climeta__MarketplaceTreasuryDonation(msg.sender, _collection, _tokenId, amountStableToTreasury);
+        }
 
         // Finally send over bought item
         IERC721(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, "");
     }
 
-    function swapExactInputSingle(uint128 raywardsAmount) internal returns (uint256 amountOut) {
+    function swapExactInputSingle(uint256 raywardsAmount) internal returns (uint256 amountOut) {
         // Approve the router to spend the Raywards
         TransferHelper.safeApprove(s.raywardAddress, s.uniswapRouter, raywardsAmount);
 
@@ -145,36 +147,97 @@ contract MarketplaceFacet is ERC1155Holder, ERC721Holder, IMarketplace {
     // ERC1155
     ////////////////////////////////////////////////////////////////
 
-    function addERC1155Item(address _collection, uint256 _tokenId, uint256 _amount, uint256 _priceRaywards, uint256 _priceEth) external {
+    function addERC1155Item(address _collection, uint256 _tokenId, uint256 _amount,  address _creator, uint256 _creatorRoyalty, uint256 _priceRaywards, uint256 _priceEth) external {
         LibDiamond.enforceIsContractOwner();
         MarketplaceStorage.MarketplaceStruct storage bs = MarketplaceStorage.marketplaceStorage();
+
+        if (_amount == 0) {
+            revert Climeta__MarketplaceInvalidAmount();
+        }
+
+        emit Climeta__ERC1155ItemAdded(_collection, _tokenId, _amount, _priceRaywards, _priceEth);
+
         bs.itemPriceRaywards[_collection][_tokenId] = _priceRaywards;
         bs.itemPriceEth[_collection][_tokenId] = _priceEth;
+        bs.itemCreator[_collection][_tokenId] = _creator;
+        bs.itemRoyalties[_collection][_tokenId] = _creatorRoyalty;
+        bs.erc1155Items[_collection][_tokenId] = _amount;
         IERC1155(_collection).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, "");
     }
 
     function removeERC1155Item(address _collection, uint256 _tokenId, uint256 _amount) external {
         LibDiamond.enforceIsContractOwner();
         MarketplaceStorage.MarketplaceStruct storage bs = MarketplaceStorage.marketplaceStorage();
+
+        if (bs.erc1155Items[_collection][_tokenId] == 0) {
+            revert Climeta__NotInMarketplace();
+        }
+
+        if (bs.erc1155Items[_collection][_tokenId] != _amount) {
+            revert Climeta__MarketplaceInvalidAmount();
+        }
+
+        emit Climeta__ERC1155ItemRemoved(_collection, _tokenId);
         bs.itemPriceRaywards[_collection][_tokenId] = 0;
         bs.itemPriceEth[_collection][_tokenId] = 0;
+        bs.itemCreator[_collection][_tokenId] = address(0);
+        bs.itemRoyalties[_collection][_tokenId] = 0;
+        bs.erc1155Items[_collection][_tokenId] = 0;
         IERC1155(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, "");
     }
 
     function buyERC1155Item(address _collection, uint256 _tokenId) external payable {
         MarketplaceStorage.MarketplaceStruct storage bs = MarketplaceStorage.marketplaceStorage();
+        if (bs.erc1155Items[_collection][_tokenId] == 0) {
+            revert Climeta__NotInMarketplace();
+        }
         uint256 priceInRaywards = bs.itemPriceRaywards[_collection][_tokenId];
         uint256 priceInEth = bs.itemPriceEth[_collection][_tokenId];
 
-        require(bs.erc1155Items[_collection][_tokenId] > 0, "Sold");
-
         if (priceInEth > msg.value) {
-            revert();
+            revert Climeta__MarketplaceNotEnoughEth();
         }
-        require( IERC20(s.raywardAddress).transferFrom(msg.sender, s.opsTreasuryAddress, priceInRaywards), "Payment failed");
 
-        IERC721(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, "");
+        emit Climeta__ItemSold(_collection, _tokenId, msg.sender);
+        bs.erc1155Items[_collection][_tokenId] -= 1;
+
+        // Process ETH payments
+        uint256 amountToCreator = priceInEth * bs.itemRoyalties[_collection][_tokenId] / 10000;
+        uint256 amountToClimeta = (priceInEth - amountToCreator) * 1 / 10;
+        uint256 amountToTreasury = (priceInEth - amountToCreator) * 9 / 10;
+        bool success;
+
+        if (amountToCreator > 0) {
+            (success,) = payable(bs.itemCreator[_collection][_tokenId]).call{value:amountToCreator}("");
+            if (!success) {
+                revert Climeta__MarketplaceEthTransferFailed();
+            }
+        }
+        if (amountToClimeta > 0) {
+            (success,) = payable(s.opsTreasuryAddress).call{value:amountToClimeta}("");
+            if (!success) {
+                revert Climeta__MarketplaceEthTransferFailed();
+            }
+        }
+
+        // Process Rayward payments
+        amountToCreator = priceInRaywards * bs.itemRoyalties[_collection][_tokenId] / 10000;
+        amountToClimeta = (priceInRaywards - amountToCreator) * 1 / 10;
+        amountToTreasury = priceInRaywards - amountToCreator - amountToClimeta;
+
+        if( (amountToCreator > 0) && !IERC20(s.raywardAddress).transferFrom(msg.sender, bs.itemCreator[_collection][_tokenId], amountToCreator)) {
+            revert Climeta__MarketplaceRaywardsTransferFailed();
+        }
+        if( !IERC20(s.raywardAddress).transferFrom(msg.sender, s.opsTreasuryAddress, amountToClimeta)) {
+            revert Climeta__MarketplaceRaywardsTransferFailed();
+        }
+        // Convert remaining Raywards to StableCoin for funding treasury
+        if (amountToTreasury > 0) {
+            uint256 amountStableToTreasury = swapExactInputSingle(amountToTreasury);
+            emit Climeta__MarketplaceTreasuryDonation(msg.sender, _collection, _tokenId, amountStableToTreasury);
+        }
+
+        // Finally send over bought item
+        IERC1155(_collection).safeTransferFrom(address(this), msg.sender, _tokenId, 1, "");
     }
-
-
 }
