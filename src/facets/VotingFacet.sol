@@ -10,7 +10,7 @@ import {IVoting} from "../interfaces/IVoting.sol";
 import {DelMundo} from "../token/DelMundo.sol";
 import {Rayward} from "../token/Rayward.sol";
 import {Raycognition} from "../token/Raycognition.sol";
-import {IRayWallet} from "../interfaces/IRayWallet.sol";
+import {IDelMundoWallet} from "../interfaces/IDelMundoWallet.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {IERC6551Registry} from "../../lib/tokenbound/lib/erc6551/src/ERC6551Registry.sol";
 
@@ -227,7 +227,7 @@ contract VotingFacet is IVoting{
         if (size == 0) {
             revert Climeta__NotRayWallet();
         }
-        (_ret, _addr, _tokenId) = IRayWallet(payable(_caller)).token();
+        (_ret, _addr, _tokenId) = IDelMundoWallet(payable(_caller)).token();
         // if _tokenId isn't valid (in range) and this isn't right chain and not the right contract, then not a valid member token.
         // Also, Ray himself (tokenId == 0) can't vote.
         if ((_tokenId <= 0) || (_tokenId > DelMundo(s.delMundoAddress).totalSupply()) || (_ret != block.chainid) || (_addr != s.delMundoAddress)) {
@@ -253,7 +253,7 @@ contract VotingFacet is IVoting{
         vs.votingRoundRaycognition[m_votingRound] += s.voteRaycognitionAmount;
 
         // Send standard voting raywards due to owner of the DelMundo
-        address delmundoOwner = IRayWallet(payable(msg.sender)).owner();
+        address delmundoOwner = IDelMundoWallet(payable(msg.sender)).owner();
         Rayward(s.raywardAddress).transferFrom(s.rayWalletAddress, delmundoOwner, s.voteReward);
     }
 
@@ -429,7 +429,7 @@ contract VotingFacet is IVoting{
             for (uint256 j = 0; j < votingDelMundos.length; j++) {
                 address delmundoWallet = IERC6551Registry(s.registryAddress).account(s.delMundoWalletAddress, 0, block.chainid, s.delMundoAddress, votingDelMundos[j]);
                 uint256 raycognition = Raycognition(s.raycognitionAddress).balanceOf(delmundoWallet);
-                address delmundoOwner = IRayWallet(payable(delmundoWallet)).owner();
+                address delmundoOwner = IDelMundoWallet(payable(delmundoWallet)).owner();
 
                 // Formula for Raywards = 50% split across all voters and rest split by proportion of Raycognition
                 uint256 rewards = 0;

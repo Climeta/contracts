@@ -9,12 +9,12 @@ import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "./interfaces/IRayWallet.sol";
+import "./interfaces/IDelMundoWallet.sol";
 import "./lib/ERC6551AccountLib.sol";
 
 import {IDelMundoWallet} from "./interfaces/IDelMundoWallet.sol";
 
-contract RayWallet is IERC165, IERC1271, IRayWallet, IDelMundoWallet, IERC1155Receiver {
+contract DelMundoWallet is IERC165, IERC1271, IDelMundoWallet, IERC1155Receiver {
     uint256 public nonce;
 
     function iAmADelMundoWallet() external pure returns (bool) {
@@ -68,7 +68,7 @@ contract RayWallet is IERC165, IERC1271, IRayWallet, IDelMundoWallet, IERC1155Re
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return (interfaceId == type(IERC165).interfaceId ||
             interfaceId == type(IERC1155Receiver).interfaceId || interfaceId == type(IDelMundoWallet).interfaceId ||
-            interfaceId == type(IRayWallet).interfaceId);
+            interfaceId == type(IDelMundoWallet).interfaceId);
     }
 
     function isValidSignature(bytes32 hash, bytes memory signature)

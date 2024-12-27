@@ -5,7 +5,7 @@ pragma solidity ^0.8.25;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import {RayWallet} from "../RayWallet.sol";
+import {DelMundoWallet} from "../DelMundoWallet.sol";
 
 /*
  * @dev Extension of ERC-1155 that adds tracking of total supply per id.
@@ -62,8 +62,8 @@ contract DelMundoTrait is ERC1155Supply, Ownable {
 
     function _update(address from, address to, uint256[] memory ids, uint256[] memory values) internal override {
         // Restrict transfers if DelMundo is wearing the trait
-        try RayWallet(payable(from)).iAmADelMundoWallet() {
-            (uint256 tokenId,,) = RayWallet(payable(from)).token();
+        try DelMundoWallet(payable(from)).iAmADelMundoWallet() {
+            (uint256 tokenId,,) = DelMundoWallet(payable(from)).token();
 
             // Loop through all transfers and determine if the DelMundo is wearing it and disallow transfer of the last item
             for (uint256 i = 0; i < ids.length; i++) {

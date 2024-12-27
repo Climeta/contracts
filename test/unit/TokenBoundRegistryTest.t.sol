@@ -2,17 +2,17 @@
 pragma solidity ^0.8.20;
 
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
-import "../../src/RayWallet.sol";
+import "../../src/DelMundoWallet.sol";
 import "../../src/token/DelMundo.sol";
 import {ERC6551Registry} from "@tokenbound/erc6551/ERC6551Registry.sol";
 import {DeployTokenBoundRegistry} from "../../script/DeployTokenBoundRegistry.s.sol";
-import {DeployRayWallet} from "../../script/DeployRayWallet.s.sol";
+import {DeployDelMundoWallet} from "../../script/DeployDelMundoWallet.s.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 
 contract TokenBoundRegistryTest is Test {
     ERC6551Registry registry;
     address constant RAY_WALLET_0 = 0x8BB538D8162C84Af471553bD7AE228FF4aD25519;
-    RayWallet rayWallet;
+    DelMundoWallet rayWallet;
     DelMundo delMundo;
     address private admin;
 
@@ -21,8 +21,8 @@ contract TokenBoundRegistryTest is Test {
         DeployTokenBoundRegistry deployer = new DeployTokenBoundRegistry();
         registry = ERC6551Registry(deployer.run());
 
-        DeployRayWallet rayWalletDeployer = new DeployRayWallet();
-        rayWallet = RayWallet(payable(rayWalletDeployer.run()));
+        DeployDelMundoWallet rayWalletDeployer = new DeployDelMundoWallet();
+        rayWallet = DelMundoWallet(payable(rayWalletDeployer.run()));
 
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
         delMundo = DelMundo(delMundoDeployer.deploy(admin));

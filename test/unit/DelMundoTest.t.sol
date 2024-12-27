@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {VmSafe} from "../../lib/forge-std/src/Vm.sol";
 import {DelMundo} from "../../src/token/DelMundo.sol";
-import {RayWallet} from "../../src/RayWallet.sol";
+import {DelMundoWallet} from "../../src/DelMundoWallet.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -314,8 +314,8 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
     function test_transferToRayWallet() public {
         delMundo.safeMint(address(this), 1, tokenUriToTest);
-        RayWallet raywallet1 = new RayWallet();
-        console.log("Raywallet is one? ", raywallet1.iAmADelMundoWallet());
+        DelMundoWallet raywallet1 = new DelMundoWallet();
+        console.log("DelMundoWallet is one? ", raywallet1.iAmADelMundoWallet());
         vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
         delMundo.transferFrom(address(this), address(raywallet1), 1);
         vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);

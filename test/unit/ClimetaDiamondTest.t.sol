@@ -17,7 +17,7 @@ import {DelMundo} from "../../src/token/DelMundo.sol";
 import {Rayward} from "../../src/token/Rayward.sol";
 import {Raycognition} from "../../src/token/Raycognition.sol";
 import {ERC6551Registry} from "@tokenbound/erc6551/ERC6551Registry.sol";
-import {RayWallet} from "../../src/RayWallet.sol";
+import {DelMundoWallet} from "../../src/DelMundoWallet.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {VotesMockUpgradeable} from "../../lib/openzeppelin-contracts-upgradeable/contracts/mocks/VotesMockUpgradeable.sol";
 
@@ -42,7 +42,7 @@ contract ClimetaDiamondTest is Test {
     ERC6551Registry registry;
     address rayWalletAddress;
     address delMundoWalletAddress;
-    RayWallet rayWallet;
+    DelMundoWallet rayWallet;
     ERC20Mock stablecoin1;
     ERC20Mock stablecoin2;
 
@@ -100,7 +100,7 @@ contract ClimetaDiamondTest is Test {
         registry = ERC6551Registry(registryAddress);
 
         rayWalletAddress = vm.envAddress("RAYWALLET_ADDRESS");
-        rayWallet = RayWallet(payable(rayWalletAddress));
+        rayWallet = DelMundoWallet(payable(rayWalletAddress));
 
         raycognitionAddress = vm.envAddress("RAYCOGNITION_ADDRESS");
         raycognition = Raycognition(raycognitionAddress);
@@ -180,7 +180,7 @@ contract ClimetaDiamondTest is Test {
 
         string memory abiFunc = "approve(address,uint256)";
         bytes memory callData = abi.encodeWithSignature(abiFunc, climeta, REWARDPOOL_INITIAL);
-        RayWallet account0wallet = RayWallet(payable(users.account0));
+        DelMundoWallet account0wallet = DelMundoWallet(payable(users.account0));
         console.log("Owner of Ray Wallet ", account0wallet.owner());
         account0wallet.executeCall(raywardAddress, 0, callData);
         vm.stopPrank();
@@ -387,9 +387,9 @@ contract ClimetaDiamondTest is Test {
         vm.stopPrank();
 
         // check that the wallets are correctly assigned to the right users
-        assertEq(RayWallet(payable(actor.account1)).owner(), actor.user1);
-        assertEq(RayWallet(payable(actor.account2)).owner(), actor.user2);
-        assertEq(RayWallet(payable(actor.account3)).owner(), actor.user3);
+        assertEq(DelMundoWallet(payable(actor.account1)).owner(), actor.user1);
+        assertEq(DelMundoWallet(payable(actor.account2)).owner(), actor.user2);
+        assertEq(DelMundoWallet(payable(actor.account3)).owner(), actor.user3);
 
         assertEq(raycognition.balanceOf(actor.account1), 0);
         assertEq(raycognition.balanceOf(actor.account2), 0);
@@ -541,15 +541,15 @@ contract ClimetaDiamondTest is Test {
 
         string memory abiFunc = "approve(address,uint256)";
         bytes memory callData = abi.encodeWithSignature(abiFunc, climeta, REWARDPOOL_INITIAL);
-        RayWallet account0wallet = RayWallet(payable(actor.account0));
+        DelMundoWallet account0wallet = DelMundoWallet(payable(actor.account0));
         console.log("Owner of Ray Wallet ", account0wallet.owner());
         account0wallet.executeCall(raywardAddress, 0, callData);
         vm.stopPrank();
 
         // check that the wallets are correctly assigned to the right users
-        assertEq(RayWallet(payable(actor.account1)).owner(), actor.user1);
-        assertEq(RayWallet(payable(actor.account2)).owner(), actor.user2);
-        assertEq(RayWallet(payable(actor.account3)).owner(), actor.user3);
+        assertEq(DelMundoWallet(payable(actor.account1)).owner(), actor.user1);
+        assertEq(DelMundoWallet(payable(actor.account2)).owner(), actor.user2);
+        assertEq(DelMundoWallet(payable(actor.account3)).owner(), actor.user3);
 
         // User creates the calldata to cast the vote for the proposal they want and then calls the NFT wallet they own and want to use to actually do the vote.
         abiFunc = "castVote(uint256)";
@@ -558,7 +558,7 @@ contract ClimetaDiamondTest is Test {
         props.callVote1 = abi.encodeWithSignature(abiFunc, 0);
         vm.startPrank(actor.user1);
         vm.expectRevert();
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
 
         console.log("Raycognitions minted before voting:", raycognition.totalSupply());
@@ -569,7 +569,7 @@ contract ClimetaDiamondTest is Test {
         vm.startPrank(actor.user1);
 //        vm.expectEmit();
 //        emit IVoting.Climeta__RaycognitionGranted(1, IAdmin(climeta).getVoteRaycognition());
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
 
         console.log("Raycognitions minted after voting:", raycognition.totalSupply());
@@ -595,16 +595,16 @@ contract ClimetaDiamondTest is Test {
 
         vm.startPrank(actor.user1);
         vm.expectRevert(IVoting.Climeta__AlreadyVoted.selector);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote2);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote2);
         vm.expectRevert(IVoting.Climeta__AlreadyVoted.selector);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         vm.stopPrank();
 
         // Now user2 votes via his NFT
         vm.startPrank(actor.user2);
         vm.expectEmit();
         emit IVoting.Climeta__Vote(2, props.prop2);
-        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
+        DelMundoWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
         vm.stopPrank();
 
         assertEq(climetaCore.getVotes(props.prop1).length, 1);
@@ -613,7 +613,7 @@ contract ClimetaDiamondTest is Test {
         vm.startPrank(actor.user3);
         vm.expectEmit();
         emit IVoting.Climeta__Vote(3, props.prop2);
-        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
+        DelMundoWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
         vm.stopPrank();
         assertEq(climetaCore.getVotes(props.prop1).length, 1);
         assertEq(climetaCore.getVotes(props.prop2).length, 2);
@@ -718,7 +718,7 @@ contract ClimetaDiamondTest is Test {
 
         abiFunc = "approve(address,uint256)";
         bytes memory callData = abi.encodeWithSignature(abiFunc, climeta, REWARDPOOL_INITIAL);
-        RayWallet account0wallet = RayWallet(payable(actor.account0));
+        DelMundoWallet account0wallet = DelMundoWallet(payable(actor.account0));
         account0wallet.executeCall(raywardAddress, 0, callData);
         vm.stopPrank();
 
@@ -732,15 +732,15 @@ contract ClimetaDiamondTest is Test {
         assertEq(climeta.balance, 13.5 ether);
 
         vm.prank(actor.user1);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote1);
         assertEq(Rayward(rayward).balanceOf(actor.user1), IAdmin(climeta).getVoteReward());
 
         vm.prank(actor.user2);
-        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
+        DelMundoWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote2);
         assertEq(Rayward(rayward).balanceOf(actor.user2), IAdmin(climeta).getVoteReward());
 
         vm.prank(actor.user3);
-        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
+        DelMundoWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote2);
         assertEq(Rayward(rayward).balanceOf(actor.user3), IAdmin(climeta).getVoteReward());
 
         // test the voting round has been incremented
@@ -833,9 +833,9 @@ contract ClimetaDiamondTest is Test {
         climetaCore.endVotingRound();
 
         vm.prank(actor.user1);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote4);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote4);
         vm.prank(actor.user2);
-        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote4);
+        DelMundoWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote4);
 
         console.log("Voting complete");
         console.log("StableCoin2 before end vote2");
@@ -932,11 +932,11 @@ contract ClimetaDiamondTest is Test {
         vm.stopPrank();
 
         vm.prank(actor.user1);
-        RayWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote5);
+        DelMundoWallet(payable(actor.account1)).executeCall(address(climetaCore), 0, props.callVote5);
         vm.prank(actor.user2);
-        RayWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote5);
+        DelMundoWallet(payable(actor.account2)).executeCall(address(climetaCore), 0, props.callVote5);
         vm.prank(actor.user3);
-        RayWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote7);
+        DelMundoWallet(payable(actor.account3)).executeCall(address(climetaCore), 0, props.callVote7);
 
         vm.startPrank(admin);
         climetaCore.endVotingRound();

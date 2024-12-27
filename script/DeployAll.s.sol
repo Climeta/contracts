@@ -10,7 +10,7 @@ import {DeployRaycognition} from "./DeployRaycognition.s.sol";
 import {DeployTokenBoundRegistry} from "./DeployTokenBoundRegistry.s.sol";
 import {DeployDiamondFacets} from "./DeployDiamondFacets.s.sol";
 import {IERC6551Registry} from "@tokenbound/erc6551/interfaces/IERC6551Registry.sol";
-import {DeployRayWallet} from "./DeployRayWallet.s.sol";
+import {DeployDelMundoWallet} from "./DeployDelMundoWallet.s.sol";
 
 contract DeployAll is Script {
     address public admin;
@@ -59,7 +59,7 @@ contract DeployAll is Script {
         raycognitionAddr = raycognition.deploy(admin);
         console.log("RAYCOGNITION_ADDRESS=", raycognitionAddr);
 
-        DeployRayWallet deployWallet = new DeployRayWallet();
+        DeployDelMundoWallet deployWallet = new DeployDelMundoWallet();
         wallet = deployWallet.run();
         console.log("DELMUNDOWALLET_ADDRESS=", wallet);
 

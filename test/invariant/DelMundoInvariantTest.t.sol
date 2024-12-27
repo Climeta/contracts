@@ -5,7 +5,7 @@ import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {VmSafe} from "../../lib/forge-std/src/Vm.sol";
 import {DelMundo} from "../../src/token/DelMundo.sol";
 import {DelMundoHandler} from "./DelMundoInvariantHandler.t.sol";
-import {RayWallet} from "../../src/RayWallet.sol";
+import {DelMundoWallet} from "../../src/DelMundoWallet.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
