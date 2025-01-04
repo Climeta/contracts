@@ -15,7 +15,7 @@ contract RaycognitionTest is Test {
     function setUp() public {
         admin = makeAddr("admin");
         DeployRaycognition raycognitionDeployer = new DeployRaycognition();
-        raycognition = Raycognition(payable(raycognitionDeployer.deploy(admin)));
+        raycognition = Raycognition(payable(raycognitionDeployer.run(admin)));
     }
 
     function test_RaycognitionDecimals() public view {

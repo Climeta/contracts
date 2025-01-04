@@ -15,6 +15,8 @@ error InitializationFunctionReverted(address _initializationContractAddress, byt
 library LibDiamond {
     error Climeta__NotAdmin();
 
+    event Climeta__NotAdminEvent(address sender, address owner);
+
     /// @custom:storage-location erc7201:diamond.standard.diamond.storage
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256(abi.encode(uint256(keccak256("diamond.standard.diamond.storage")) - 1)) & ~bytes32(uint256(0xff));
 
@@ -64,8 +66,9 @@ library LibDiamond {
         contractOwner_ = diamondStorage().contractOwner;
     }
 
-    function enforceIsContractOwner() internal view {
+    function enforceIsContractOwner() internal {
         if (msg.sender != diamondStorage().contractOwner) {
+            emit Climeta__NotAdminEvent(msg.sender, diamondStorage().contractOwner);
             revert Climeta__NotAdmin();
         }
     }

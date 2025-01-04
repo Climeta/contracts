@@ -9,23 +9,7 @@ import "../src/interfaces/IDiamondCut.sol";
 import "../src/interfaces/IVoting.sol";
 
 contract DeployVotingFacet is Script, DiamondHelper {
-    uint256 deployerPrivateKey;
-    address deployerAddress;
-
-    constructor(){
-        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
-        deployerAddress = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
-    }
-
-    function deploy() external {
-        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
-        run();
-    }
-
-    function run() public {
-        vm.startBroadcast(deployerPrivateKey);
-
+    function run(address climetaAddress) public {
         VotingFacet votingFacet = new VotingFacet();
         FacetCut[] memory cut = new FacetCut[](1);
 
@@ -35,13 +19,10 @@ contract DeployVotingFacet is Script, DiamondHelper {
             functionSelectors: generateSelectors("VotingFacet")
         });
 
-        address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
         bytes memory data = abi.encodeWithSignature("init()");
         climeta.diamondCut(cut, address(votingFacet), data);
         climeta.diamondSetInterface(type(IVoting).interfaceId, true);
-
-            vm.stopBroadcast();
     }
 }

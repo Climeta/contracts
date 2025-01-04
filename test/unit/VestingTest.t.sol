@@ -26,7 +26,7 @@ contract VestingTest is Test {
         investor2 = makeAddr("investor2");
         investor3 = makeAddr("investor3");
         DeployRayward raywardDeployer = new DeployRayward();
-        rayward = Rayward(payable(raywardDeployer.deploy(admin)));
+        rayward = Rayward(payable(raywardDeployer.run(admin)));
         vm.prank(admin);
         rayward.mint(admin, 10_000_000 );
 

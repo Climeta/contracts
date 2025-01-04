@@ -48,7 +48,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
 // Signing constants
-    string public constant SIGNING_DOMAIN = "RayNFT-Voucher";
+    string public constant SIGNING_DOMAIN = "DelMundo-Voucher";
     string public constant SIGNING_VERSION = "1";
     bytes32 public constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public constant VOUCHER_TYPEHASH = keccak256("NFTVoucher(uint256 tokenId,string uri,uint256 minPrice)");

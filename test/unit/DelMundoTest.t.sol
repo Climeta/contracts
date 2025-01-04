@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {VmSafe} from "../../lib/forge-std/src/Vm.sol";
 import {DelMundo} from "../../src/token/DelMundo.sol";
-import {RayWallet} from "../../src/RayWallet.sol";
+import {DelMundoWallet} from "../../src/DelMundoWallet.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -30,7 +30,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     address private admin;
     uint256 private adminPk;
 
-    string private constant SIGNING_DOMAIN = "RayNFT-Voucher";
+    string private constant SIGNING_DOMAIN = "DelMundo-Voucher";
     string private constant SIGNATURE_VERSION = "1";
     uint256 private constant MIN_PRICE = 100000000000;
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -51,7 +51,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function setUp() public {
         (admin, adminPk) = makeAddrAndKey("admin");
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.deploy(admin));
+        delMundo = DelMundo(delMundoDeployer.run(admin));
         address current = address(this);
 
         vm.prank(admin);
@@ -314,8 +314,8 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
 
     function test_transferToRayWallet() public {
         delMundo.safeMint(address(this), 1, tokenUriToTest);
-        RayWallet raywallet1 = new RayWallet();
-        console.log("Raywallet is one? ", raywallet1.iAmADelMundoWallet());
+        DelMundoWallet raywallet1 = new DelMundoWallet();
+        console.log("DelMundoWallet is one? ", raywallet1.iAmADelMundoWallet());
         vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);
         delMundo.transferFrom(address(this), address(raywallet1), 1);
         vm.expectRevert(DelMundo.DelMundo__CannotMoveToDelMundoWallet.selector);

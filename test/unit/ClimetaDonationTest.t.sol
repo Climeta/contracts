@@ -4,53 +4,96 @@ pragma solidity ^0.8.20;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {StdInvariant} from "../../lib/forge-std/src/StdInvariant.sol";
 import {DeployAll} from "../../script/DeployAll.s.sol";
-import {DeployClimetaDiamond} from "../../script/DeployClimetaDiamond.s.sol";
-import {DeployAdminFacet} from "../../script/DeployAdminFacet.s.sol";
-import {DeployDonationFacet} from "../../script/DeployDonationFacet.s.sol";
-import {DeployVotingFacet} from "../../script/DeployVotingFacet.s.sol";
+import {AdminFacet} from "../../src/facets/AdminFacet.sol";
+import {DonationFacet} from "../../src/facets/DonationFacet.sol";
+import {VotingFacet} from "../../src/facets/VotingFacet.sol";
+import {MarketplaceFacet} from "../../src/facets/MarketplaceFacet.sol";
 import {IOwnership} from "../../src/interfaces/IOwnership.sol";
+import {IMarketplace} from "../../src/interfaces/IMarketplace.sol";
 import {IAdmin} from "../../src/interfaces/IAdmin.sol";
 import {IDonation} from "../../src/interfaces/IDonation.sol";
+import {IVoting} from "../../src/interfaces/IVoting.sol";
 import { LibDiamond } from "../../src/lib/LibDiamond.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import "../../src/facets/AdminFacet.sol";
+import "../../src/utils/DiamondHelper.sol";
+import "../../src/interfaces/IDiamondCut.sol";
 
-contract ClimetaDonationTest is Test {
+contract ClimetaDonationTest is Test, DiamondHelper {
     //    Authorization auth;
     address ops;
     address admin;
-    address climetaAddr;
     ERC20Mock stablecoin1;
     ERC20Mock stablecoin2;
     ERC20Mock stablecoin3;
-    IDonation climeta;
     IAdmin climetaAdmin;
     address brand1;
     address brand2;
     address brand3;
     address brand4;
+    DeployAll.Addresses contracts;
 
     function setUp() public {
-        DeployAll preDeployer = new DeployAll();
-        preDeployer.run();
-        DeployClimetaDiamond climetaDeployer = new DeployClimetaDiamond();
-        climetaAddr = climetaDeployer.run();
-        DeployAdminFacet adminDeployer = new DeployAdminFacet();
-        adminDeployer.run();
-        DeployDonationFacet donationDeployer = new DeployDonationFacet();
-        donationDeployer.run();
-        DeployVotingFacet votingDeployer = new DeployVotingFacet();
-        votingDeployer.run();
+        ops = makeAddr("Ops");
+        admin = makeAddr("Admin");
 
-        admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
-        ops = IAdmin(climetaAddr).getOpsTreasuryAddress();
-        vm.prank(admin);
+        vm.startPrank(admin);
+        DeployAll deployer = new DeployAll();
+        contracts = deployer.run(admin);
+
+        // Deploy Facets
+        AdminFacet adminFacet = new AdminFacet();
+        FacetCut[] memory cut = new FacetCut[](1);
+        cut[0] = FacetCut ({
+            facetAddress: address(adminFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("AdminFacet")
+        });
+        IDiamondCut climeta = IDiamondCut(contracts.climeta);
+        climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IAdmin).interfaceId, true);
+
+        DonationFacet donationFacet = new DonationFacet();
+        cut = new FacetCut[](1);
+        cut[0] = FacetCut ({
+            facetAddress: address(donationFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("DonationFacet")
+        });
+        climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IDonation).interfaceId, true);
+
+        VotingFacet votingFacet = new VotingFacet();
+        cut = new FacetCut[](1);
+        cut[0] = FacetCut ({
+            facetAddress: address(votingFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("VotingFacet")
+        });
+        bytes memory data = abi.encodeWithSignature("init()");
+        climeta.diamondCut(cut, address(votingFacet), data);
+        climeta.diamondSetInterface(type(IVoting).interfaceId, true);
+
+        MarketplaceFacet marketplaceFacet = new MarketplaceFacet();
+        cut = new FacetCut[](1);
+        // remove supportsInterface
+        cut[0] = FacetCut ({
+            facetAddress: address(marketplaceFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("MarketplaceFacet")
+        });
+        climeta.diamondCut(cut, address(0), "0x");
+        climeta.diamondSetInterface(type(IMarketplace).interfaceId, true);
 
         stablecoin1 = new ERC20Mock();
         stablecoin2 = new ERC20Mock();
         stablecoin3 = new ERC20Mock();
 
-        climeta = IDonation(climetaAddr);
-        climetaAdmin = IAdmin(climetaAddr);
+        IAdmin(contracts.climeta).updateOpsTreasuryAddress(payable(ops));
+        IAdmin(contracts.climeta).setWithdrawalOnly(false);
+        vm.stopPrank();
+
+        climetaAdmin = IAdmin(contracts.climeta);
         brand1 = makeAddr("brand1");
         brand2 = makeAddr("brand2");
         brand3 = makeAddr("brand3");
@@ -77,6 +120,8 @@ contract ClimetaDonationTest is Test {
     }
 
     function test_TokenApprovals() public {
+        IDonation climeta = IDonation(contracts.climeta);
+
         vm.prank(brand1);
         vm.expectRevert(IDonation.Climeta__NotValueToken.selector);
         climeta.donateToken(address(stablecoin1), 100);
@@ -90,7 +135,7 @@ contract ClimetaDonationTest is Test {
         climeta.donateToken(address(stablecoin1), 100);
 
         vm.startPrank(brand1);
-        stablecoin1.approve(climetaAddr, 100);
+        stablecoin1.approve(contracts.climeta, 100);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand1, address(stablecoin1), 100);
         climeta.donateToken(address(stablecoin1), 100);
@@ -122,6 +167,7 @@ contract ClimetaDonationTest is Test {
 
 
     function test_MinimumDonations() public {
+        IDonation climeta = IDonation(contracts.climeta);
 
         vm.startPrank(admin);
         climetaAdmin.addAllowedToken(address(stablecoin1));
@@ -136,9 +182,9 @@ contract ClimetaDonationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(brand1);
-        stablecoin1.approve(climetaAddr, 100_000);
-        stablecoin2.approve(climetaAddr, 200_000);
-        stablecoin3.approve(climetaAddr, 300_000);
+        stablecoin1.approve(contracts.climeta, 100_000);
+        stablecoin2.approve(contracts.climeta, 200_000);
+        stablecoin3.approve(contracts.climeta, 300_000);
 
         vm.expectRevert(IDonation.Climeta__DonationNotAboveThreshold.selector);
         climeta.donateToken(address(stablecoin1), 999);
@@ -170,7 +216,8 @@ contract ClimetaDonationTest is Test {
 
 
     function test_Donations() public {
-        assertEq(IDonation(climeta).donationFacetVersion(), "1.0");
+        IDonation climeta = IDonation(contracts.climeta);
+        assertEq(climeta.donationFacetVersion(), "1.0");
 
         vm.startPrank(admin);
         climetaAdmin.addAllowedToken(address(stablecoin1));
@@ -197,9 +244,9 @@ contract ClimetaDonationTest is Test {
 
 
         vm.startPrank(brand2);
-        stablecoin1.approve(climetaAddr, 100);
-        stablecoin2.approve(climetaAddr, 200);
-        stablecoin3.approve(climetaAddr, 300);
+        stablecoin1.approve(contracts.climeta, 100);
+        stablecoin2.approve(contracts.climeta, 200);
+        stablecoin3.approve(contracts.climeta, 300);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin1), 100);
         climeta.donateToken(address(stablecoin1), 100);
@@ -215,9 +262,9 @@ contract ClimetaDonationTest is Test {
         vm.stopPrank();
 
         vm.startPrank(brand3);
-        stablecoin1.approve(climetaAddr, 10);
-        stablecoin2.approve(climetaAddr, 20);
-        stablecoin3.approve(climetaAddr, 30);
+        stablecoin1.approve(contracts.climeta, 10);
+        stablecoin2.approve(contracts.climeta, 20);
+        stablecoin3.approve(contracts.climeta, 30);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand3, address(stablecoin1), 10);
         climeta.donateToken(address(stablecoin1), 10);
@@ -236,9 +283,9 @@ contract ClimetaDonationTest is Test {
         assertEq(climeta.getTotalTokenDonations(address(stablecoin3)), 330);
 
         vm.startPrank(brand2);
-        stablecoin1.approve(climetaAddr, 100);
-        stablecoin2.approve(climetaAddr, 200);
-        stablecoin3.approve(climetaAddr, 300);
+        stablecoin1.approve(contracts.climeta, 100);
+        stablecoin2.approve(contracts.climeta, 200);
+        stablecoin3.approve(contracts.climeta, 300);
         vm.expectEmit();
         emit IDonation.Climeta__ERC20Donation(brand2, address(stablecoin1), 100);
         climeta.donateToken(address(stablecoin1), 100);

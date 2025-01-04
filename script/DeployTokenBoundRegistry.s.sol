@@ -5,8 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import "@tokenbound/erc6551/ERC6551Registry.sol";
 
 contract DeployTokenBoundRegistry is Script {
-
-    function run() external returns (address) {
+    function run() public returns (address) {
         ERC6551Registry registry = new ERC6551Registry();
         return (address(registry));
     }

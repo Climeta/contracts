@@ -6,16 +6,8 @@ import {DelMundoTrait} from "../src/token/DelMundoTrait.sol";
 
 
 contract DeployDelMundoTrait is Script {
-
-    function deploy(address _admin) external returns (address) {
-        DelMundoTrait delMundoTrait = new DelMundoTrait(_admin);
-        return (address(delMundoTrait));
-    }
-
-    function run() external returns (address) {
-        address admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
-        DelMundoTrait delMundoTrait = new DelMundoTrait(admin);
-        delMundoTrait = DelMundoTrait(address(delMundoTrait));
+    function run(address _admin, address _climeta) public returns (address) {
+        DelMundoTrait delMundoTrait = new DelMundoTrait(_admin, _climeta);
         return (address(delMundoTrait));
     }
 }
