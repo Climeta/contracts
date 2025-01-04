@@ -11,46 +11,7 @@ import {Raycognition} from "../src/token/Raycognition.sol";
 import "../src/utils/DiamondHelper.sol";
 
 contract DeployClimetaDiamond is Script, DiamondHelper {
-    uint256 deployerPrivateKey;
-    address deployerAddress;
-
-    constructor(){
-        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
-        deployerAddress = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
-    }
-
-    function deploy() external {
-        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
-        run();
-    }
-
-    struct Addresses {
-        address _delMundoAddress;
-        address _delMundoTraitAddress;
-        address _raywardAddress;
-        address _raycognitionAddress;
-        address _raywalletAddress;
-        address _delmundowalletAddress;
-        address _registryAddress;
-        address _ops;
-    }
-
-    function run() public returns (address) {
-
-        Addresses memory addresses;
-        //read env variables and choose EOA for transaction signing
-        addresses._delMundoAddress = vm.envAddress("DELMUNDO_ADDRESS");
-        addresses._delMundoTraitAddress = vm.envAddress("DELMUNDOTRAIT_ADDRESS");
-        addresses._raywardAddress = vm.envAddress("RAYWARD_ADDRESS");
-        addresses._raycognitionAddress = vm.envAddress("RAYCOGNITION_ADDRESS");
-        addresses._raywalletAddress = vm.envAddress("RAYWALLET_ADDRESS");
-        addresses._delmundowalletAddress = vm.envAddress("DELMUNDOWALLET_ADDRESS");
-        addresses._registryAddress = vm.envAddress("REGISTRY_ADDRESS");
-        addresses._ops = vm.envAddress("OPS_TREASURY_ADDRESS");
-
-        vm.startBroadcast(deployerPrivateKey);
-
+    function run(address _owner, address _delMundoAddress, address _raywardAddress, address _raycognitionAddress, address _raywalletAddress, address _delmundowalletAddress, address _registryAddress, address _ops) public returns (address) {
         //deploy facets and init contract
         DiamondCutFacet dCutF = new DiamondCutFacet();
         DiamondLoupeFacet dLoupeF = new DiamondLoupeFacet();
@@ -60,9 +21,9 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
 
         // diamond arguments
         DiamondArgs memory _args = DiamondArgs({
-            owner: deployerAddress,
+            owner: _owner,
             init: address(diamondInit),
-            initCalldata: abi.encodeWithSignature("init(address,address,address,address,address,address,address,address)", addresses._delMundoAddress, addresses._raywardAddress, addresses._raycognitionAddress, addresses._delmundowalletAddress, addresses._raywalletAddress, addresses._registryAddress, addresses._ops, addresses._delMundoTraitAddress)
+            initCalldata: abi.encodeWithSignature("init(address,address,address,address,address,address,address)", _delMundoAddress, _raywardAddress, _raycognitionAddress, _delmundowalletAddress, _raywalletAddress, _registryAddress, _ops)
         });
 
         // FacetCut array which contains the three standard facets to be added
@@ -73,12 +34,18 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
             action: FacetCutAction.Add,
             functionSelectors: generateSelectors("DiamondCutFacet")
         });
-
+        bytes4[] memory selectors = generateSelectors("DiamondLoupeFacet");
+        // Add the supportsInterface(bytes4) selector
+        bytes4[] memory fullSelectors = new bytes4[](selectors.length + 1);
+        for (uint256 i; i < selectors.length; i++) {
+            fullSelectors[i] = selectors[i];
+        }
+        fullSelectors[selectors.length] = bytes4(keccak256("supportsInterface(bytes4)"));
         cut[1] = (
             FacetCut({
             facetAddress: address(dLoupeF),
             action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("DiamondLoupeFacet")
+            functionSelectors: fullSelectors
         })
         );
 
@@ -94,11 +61,7 @@ contract DeployClimetaDiamond is Script, DiamondHelper {
         ClimetaDiamond diamond = new ClimetaDiamond(cut, _args);
 
         // Add diamond address where it needs to be
-        // Raycognition has Climeta as a minter for granting raywards
-        Raycognition(addresses._raycognitionAddress).grantMinter(address(diamond));
         console.log("CLIMETA_ADDRESS=", address(diamond));
-        vm.stopBroadcast();
-
         return (address(diamond));
     }
 }

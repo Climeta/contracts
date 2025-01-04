@@ -28,9 +28,6 @@ contract MarketplaceFacet is ERC1155Holder, ERC721Holder, IMarketplace {
         return "1.0";
     }
 
-    uint256 public constant ERC721 = 721;
-    uint256 public constant ERC1155 = 1155;
-
     ////////////////////////////////////////////////////////////////
     // ERC721
     ////////////////////////////////////////////////////////////////

@@ -43,14 +43,25 @@ abstract contract DiamondHelper is IDiamondCut, IDiamondLoupe, Test{
         strings.slice memory colon = ":".toSlice();
         strings.slice memory comma = ",".toSlice();
         strings.slice memory dbquote = '"'.toSlice();
-        selectors = new bytes4[]((s.count(colon)));
+        bytes4[] memory tempSelectors = new bytes4[]((s.count(colon)));
+        uint256 count = 0;
 
-        for(uint i = 0; i < selectors.length; i++) {
+        for(uint i = 0; i < tempSelectors.length; i++) {
             s.split(dbquote);   // advance to next doublequote
+            // don't add supportsInterface - 01ffc9a7
             // split at colon, extract string up to next doublequote for methodname
             strings.slice memory method = s.split(colon).until(dbquote);
-            selectors[i] = bytes4(method.keccak());
+            bytes4 selector = bytes4(method.keccak());
+            if (selector != 0x01ffc9a7) { // exclude supportsInterface - 01ffc9a7
+                tempSelectors[count] = selector;
+                count++;
+            }
             s.split(comma).until(dbquote);     // advance s to the next comma
+        }
+        // create new array with correct length
+        selectors = new bytes4[](count);
+        for (uint256 i = 0; i < count; i++) {
+            selectors[i] = tempSelectors[i];
         }
         return selectors;
     }

@@ -4,11 +4,9 @@ pragma solidity ^0.8.25;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {StdInvariant} from "../../lib/forge-std/src/StdInvariant.sol";
 import {DeployAll} from "../../script/DeployAll.s.sol";
-import {DeployClimetaDiamond} from "../../script/DeployClimetaDiamond.s.sol";
-import {DeployMockFacet} from "../../script/DeployMockFacet.s.sol";
-import {DeployAdminFacet} from "../../script/DeployAdminFacet.s.sol";
-import {DeployDonationFacet} from "../../script/DeployDonationFacet.s.sol";
-import {DeployVotingFacet} from "../../script/DeployVotingFacet.s.sol";
+import {AdminFacet} from "../../src/facets/AdminFacet.sol";
+import {DonationFacet} from "../../src/facets/DonationFacet.sol";
+import {VotingFacet} from "../../src/facets/VotingFacet.sol";
 import {MockFacet as MockFacetV1} from "../mocks/MockFacetV1.sol";
 import {MockFacet as MockFacetV2} from "../mocks/MockFacetV2.sol";
 import {MockFacet as MockFacetV3} from "../mocks/MockFacetV3.sol";
@@ -33,33 +31,59 @@ contract DiamondTest is Test, DiamondHelper {
     address mockv1;
     address mockv2;
     address mockv3;
+    address delMundoAddress;
+    address raywardAddress;
+    address raycognitionAddress;
+    address registryAddress;
+    address rayWalletAddress;
+    address delMundoWalletAddress;
+    DeployAll.Addresses contracts;
 
     function setUp() public {
-        DeployAll preDeployer = new DeployAll();
-        preDeployer.run();
-        DeployClimetaDiamond climetaDeployer = new DeployClimetaDiamond();
-        climeta = climetaDeployer.run();
-        DeployMockFacet mockDeployer = new DeployMockFacet();
-        mockDeployer.run();
-        admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+        admin = makeAddr("Admin");
+        ops = makeAddr("Ops");
+
+        vm.startPrank(admin);
+        DeployAll deployer = new DeployAll();
+        contracts = deployer.run(admin);
+
+        climeta = contracts.climeta;
+        //deploy facets and init contract
+        MockFacetV1 mockFacet = new MockFacetV1();
+        FacetCut[] memory cut = new FacetCut[](1);
+
+        // FacetCut array which contains the three standard facets to be added
+        cut[0] = FacetCut ({
+            facetAddress: address(mockFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("test/mocks/MockFacetV1.sol:MockFacet")
+        });
+
+        IDiamondCut(climeta).diamondCut(cut, address(0), "0x");
+        IDiamondCut(climeta).diamondSetInterface(type(IMockFacetV1).interfaceId, true);
+        vm.stopPrank();
     }
 
     function test_SupportsInterfaces() public {
+
         assertTrue(IERC165(climeta).supportsInterface(type(IMockFacetV1).interfaceId));
 
         assertFalse(IERC165(climeta).supportsInterface(type(IAdmin).interfaceId));
-        DeployAdminFacet adminDeployer = new DeployAdminFacet();
-        adminDeployer.run();
+        vm.startPrank(admin);
+        deployAdminFacet();
+        vm.stopPrank();
         assertTrue(IERC165(climeta).supportsInterface(type(IAdmin).interfaceId));
 
         assertFalse(IERC165(climeta).supportsInterface(type(IDonation).interfaceId));
-        DeployDonationFacet donationDeployer = new DeployDonationFacet();
-        donationDeployer.run();
+        vm.startPrank(admin);
+        deployDonationFacet();
+        vm.stopPrank();
         assertTrue(IERC165(climeta).supportsInterface(type(IDonation).interfaceId));
 
         assertFalse(IERC165(climeta).supportsInterface(type(IVoting).interfaceId));
-        DeployVotingFacet votingDeployer = new DeployVotingFacet();
-        votingDeployer.run();
+        vm.startPrank(admin);
+        deployVotingFacet();
+        vm.stopPrank();
         assertTrue(IERC165(climeta).supportsInterface(type(IVoting).interfaceId));
     }
 
@@ -110,7 +134,7 @@ contract DiamondTest is Test, DiamondHelper {
             functionSelectors: generateSelectors("test/mocks/MockFacetV2.sol:MockFacet")
         });
 
-        address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
+        address climetaAddress = contracts.climeta;
         IDiamondCut climetaDiamond = IDiamondCut(climetaAddress);
         climetaDiamond.diamondCut(cut, address(0), "0x");
         climetaDiamond.diamondSetInterface(type(IMockFacetV1).interfaceId, false);
@@ -141,10 +165,9 @@ contract DiamondTest is Test, DiamondHelper {
         ////////////// FACET UPGRADE2 //////////////////////
 
         // Add a new facet inbetween upgrades test
-        DeployAdminFacet adminDeployer = new DeployAdminFacet();
-        adminDeployer.run();
-
         vm.startPrank(admin);
+        deployAdminFacet();
+
         MockFacetV3 mockFacetv3 = new MockFacetV3();
         FacetCut[] memory cut2 = new FacetCut[](2);
 
@@ -165,10 +188,41 @@ contract DiamondTest is Test, DiamondHelper {
         climetaDiamond.diamondSetInterface(type(IMockFacetV2).interfaceId, false);
         climetaDiamond.diamondSetInterface(type(IMockFacetV3).interfaceId, true);
         vm.stopPrank();
+    }
 
-
-
-
+    function deployAdminFacet() public {
+        AdminFacet adminFacet = new AdminFacet();
+        FacetCut[] memory cut = new FacetCut[](1);
+        cut[0] = FacetCut ({
+            facetAddress: address(adminFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("AdminFacet")
+        });
+        IDiamondCut(climeta).diamondCut(cut, address(0), "0x");
+        IDiamondCut(climeta).diamondSetInterface(type(IAdmin).interfaceId, true);
+    }
+    function deployDonationFacet() public {
+        DonationFacet donationFacet = new DonationFacet();
+        FacetCut[] memory cut = new FacetCut[](1);
+        cut[0] = FacetCut ({
+            facetAddress: address(donationFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("DonationFacet")
+        });
+        IDiamondCut(climeta).diamondCut(cut, address(0), "0x");
+        IDiamondCut(climeta).diamondSetInterface(type(IDonation).interfaceId, true);
+    }
+    function deployVotingFacet() public {
+        VotingFacet votingFacet = new VotingFacet();
+        FacetCut[] memory cut = new FacetCut[](1);
+        cut[0] = FacetCut ({
+            facetAddress: address(votingFacet),
+            action: FacetCutAction.Add,
+            functionSelectors: generateSelectors("VotingFacet")
+        });
+        bytes memory data = abi.encodeWithSignature("init()");
+        IDiamondCut(climeta).diamondCut(cut, address(votingFacet), data);
+        IDiamondCut(climeta).diamondSetInterface(type(IVoting).interfaceId, true);
     }
 }
 

@@ -6,8 +6,7 @@ import {DelMundoWallet} from "../src/DelMundoWallet.sol";
 
 
 contract DeployDelMundoWallet is Script {
-
-    function run() external returns (address) {
+    function run() public returns (address) {
         DelMundoWallet delMundoWallet = new DelMundoWallet();
         return (address(delMundoWallet));
     }

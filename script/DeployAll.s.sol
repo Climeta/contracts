@@ -1,4 +1,4 @@
-/// SPDX-License-Identifier: UNLICENSED
+    /// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
@@ -11,71 +11,99 @@ import {DeployTokenBoundRegistry} from "./DeployTokenBoundRegistry.s.sol";
 import {DeployDiamondFacets} from "./DeployDiamondFacets.s.sol";
 import {IERC6551Registry} from "@tokenbound/erc6551/interfaces/IERC6551Registry.sol";
 import {DeployDelMundoWallet} from "./DeployDelMundoWallet.s.sol";
+import {IAdmin} from "../src/interfaces/IAdmin.sol";
+import {IOwnership} from "../src/interfaces/IOwnership.sol";
+import {Raycognition} from "../src/token/Raycognition.sol";
+import {DeployDonationFacet} from "./DeployDonationFacet.s.sol";
+import {DeployVotingFacet} from "./DeployVotingFacet.s.sol";
+import {DeployMarketplaceFacet} from "./DeployMarketplaceFacet.s.sol";
+import {DeployTraitFacet} from "./DeployTraitFacet.s.sol";
 
 contract DeployAll is Script {
-    address public admin;
-    address public delMundoAddr;
-    address public delMundoTraitAddr;
-    address public raywardAddr;
-    address public raycognitionAddr;
-    address public wallet;
-    address public registryAddr;
-    uint256 public chainId;
-    address public rayWallet;
-    address public diamondcut;
-    address public diamondLoupe;
-    address public ownership;
-    uint256 deployerPrivateKey;
 
-    constructor(){
-        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
-        admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
+    /*
+    *  Order of install
+    *
+    *   DelMundo
+    *   Rayward
+    *   Raycognition
+    *   DelMundoWallet
+    *   TokenBoundRegistry
+    *   DiamondCut
+    *   DiamondLoupe
+    *   Ownership
+    *   ClimetaDiamond
+    *   DelMundoTrait
+    *   AdminFacet
+    *   DonationFacet
+    *   VotingFacet
+    *   MarketplaceFacet
+    *   TraitFacet
+    *   ClimetaAssets
+    */
+
+    struct Addresses {
+        address delMundo;
+        address rayward;
+        address raycognition;
+        address delMundoWallet;
+        address registry;
+        address rayWallet;
+        address climeta;
+        address delMundoTrait;
+        address climetaAssets;
+        address ops;
     }
 
-    function deploy() external {
-        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        admin = vm.envAddress("DEPLOYER_PUBLIC_KEY");
-        run();
+    struct Deployers {
+        DeployDelMundo delMundo;
+        DeployRayward rayward;
+        DeployRaycognition raycognition;
+        DeployDelMundoWallet deployWallet;
+        DeployTokenBoundRegistry registry;
+        DeployClimetaDiamond climetaDeployer;
+        DeployDelMundoTrait delMundoTrait;
+        DeployDonationFacet donationDeployer;
+        DeployVotingFacet votingDeployer;
+        DeployMarketplaceFacet marketplaceDeployer;
+        DeployTraitFacet traitDeployer;
     }
 
-    function run() public {
-        // 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 is admin and address [0] from anvil
+    function run(address _admin) public returns (Addresses memory) {
+        Addresses memory addresses;
+        Deployers memory deployers;
 
-        vm.startBroadcast(deployerPrivateKey);
+        deployers.delMundo = new DeployDelMundo();
+        addresses.delMundo = deployers.delMundo.run(_admin);
+        console.log("DELMUNDO_ADDRESS=", addresses.delMundo);
 
-        DeployDelMundo delMundo = new DeployDelMundo();
-        delMundoAddr = delMundo.deploy(admin);
-        console.log("DELMUNDO_ADDRESS=", delMundoAddr);
+        deployers.rayward = new DeployRayward();
+        addresses.rayward = deployers.rayward.run(_admin);
+        console.log("RAYWARD_ADDRESS=", addresses.rayward);
 
-        DeployDelMundoTrait delMundoTrait = new DeployDelMundoTrait();
-        delMundoTraitAddr = delMundoTrait.deploy(admin);
-        console.log("DELMUNDOTRAIT_ADDRESS=", delMundoTraitAddr);
+        deployers.raycognition = new DeployRaycognition();
+        addresses.raycognition = deployers.raycognition.run(_admin);
+        console.log("RAYCOGNITION_ADDRESS=", addresses.raycognition);
 
-        DeployRayward rayward = new DeployRayward();
-        raywardAddr = rayward.deploy(admin);
-        console.log("RAYWARD_ADDRESS=", raywardAddr);
+        deployers.deployWallet = new DeployDelMundoWallet();
+        addresses.delMundoWallet = deployers.deployWallet.run();
+        console.log("DELMUNDOWALLET_ADDRESS=", addresses.delMundoWallet);
 
-        DeployRaycognition raycognition = new DeployRaycognition();
-        raycognitionAddr = raycognition.deploy(admin);
-        console.log("RAYCOGNITION_ADDRESS=", raycognitionAddr);
+        deployers.registry = new DeployTokenBoundRegistry();
+        addresses.registry = deployers.registry.run();
+        console.log("REGISTRY_ADDRESS=", addresses.registry);
+        addresses.rayWallet = IERC6551Registry(addresses.registry).account(addresses.delMundoWallet, 0, block.chainid, addresses.delMundo, 0);
+        console.log("RAYWALLET_ADDRESS=", addresses.rayWallet);
 
-        DeployDelMundoWallet deployWallet = new DeployDelMundoWallet();
-        wallet = deployWallet.run();
-        console.log("DELMUNDOWALLET_ADDRESS=", wallet);
+        deployers.climetaDeployer = new DeployClimetaDiamond();
+        addresses.climeta = deployers.climetaDeployer.run(_admin,addresses.delMundo,addresses.rayward, addresses.raycognition, addresses.rayWallet,addresses.delMundoWallet,  addresses.registry, addresses.ops);
+        console.log("CLIMETA_ADDRESS=", addresses.climeta);
 
-        DeployTokenBoundRegistry registry = new DeployTokenBoundRegistry();
-        registryAddr = registry.run();
-        console.log("REGISTRY_ADDRESS=", registryAddr);
-        chainId = vm.envUint("CHAINID");
-        rayWallet = IERC6551Registry(registryAddr).account(wallet, 0, chainId, delMundoAddr, 0);
-        console.log("RAYWALLET_ADDRESS=", rayWallet);
+        deployers.delMundoTrait = new DeployDelMundoTrait();
+        addresses.delMundoTrait = deployers.delMundoTrait.run(_admin, addresses.climeta);
+        console.log("DELMUNDOTRAIT_ADDRESS=", addresses.delMundoTrait);
 
-        DeployDiamondFacets coreFacets = new DeployDiamondFacets();
-        (diamondcut, diamondLoupe, ownership) = coreFacets.run();
 
-//        DeployClimetaDiamond deployClimeta = new DeployClimetaDiamond();
-//        deployClimeta.run();
-
-        vm.stopBroadcast();
+        return addresses;
     }
 }

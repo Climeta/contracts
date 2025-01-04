@@ -30,7 +30,7 @@ contract DelMundoInvariantTest is Test, IERC721Receiver {
     function setUp() public {
         (admin, adminPk) = makeAddrAndKey("admin");
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.deploy(admin));
+        delMundo = DelMundo(delMundoDeployer.run(admin));
 
         handler = new DelMundoHandler (delMundo);
         bytes4[] memory selectors = new bytes4[](1);

@@ -4,9 +4,15 @@ pragma solidity ^0.8.20;
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {VmSafe} from "../../lib/forge-std/src/Vm.sol";
 import {DelMundo} from "../../src/token/DelMundo.sol";
+import {Raycognition} from "../../src/token/Raycognition.sol";
 import {DelMundoTrait} from "../../src/token/DelMundoTrait.sol";
 import {DelMundoWallet} from "../../src/DelMundoWallet.sol";
 import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
+import {DeployClimetaDiamond} from "../../script/DeployClimetaDiamond.s.sol";
+import {DeployAdminFacet} from "../../script/DeployAdminFacet.s.sol";
+import {DeployDonationFacet} from "../../script/DeployDonationFacet.s.sol";
+import {DeployVotingFacet} from "../../script/DeployVotingFacet.s.sol";
+import {DeployAll} from "../../script/DeployAll.s.sol";
 import {DeployDelMundoTrait} from "../../script/DeployDelMundoTrait.s.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -22,7 +28,7 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
     string constant tokenUriToTest2 = "https://token.uri2/";
     uint256 constant MAX_SUPPLY = 1000;
     uint256 constant MAX_PER_WALLET = 5;
-    string private constant SIGNING_DOMAIN = "RayNFT-Voucher";
+    string private constant SIGNING_DOMAIN = "DelMundo-Voucher";
     string private constant SIGNATURE_VERSION = "1";
     uint256 private constant MIN_PRICE = 100000000000;
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -30,6 +36,7 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
 
     DelMundo private delMundo;
     DelMundoTrait private delMundoTrait;
+    DeployAll.Addresses contracts;
 
     struct Actors {
         address user1;
@@ -71,14 +78,10 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
         vm.deal(actors.user2, 10 ether);
         vm.deal(actors.user3, 10 ether);
 
-        DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.deploy( actors.admin));
-        vm.prank(actors.admin);
-        // 10% royalty for secondary sales
-        delMundo.setDefaultRoyalties(actors.treasury, 1000);
-
-        DeployDelMundoTrait delMundoTraitDeployer = new DeployDelMundoTrait();
-        delMundoTrait = DelMundoTrait(delMundoTraitDeployer.deploy(actors.admin));
+        vm.startPrank(actors.admin);
+        DeployAll deployer = new DeployAll();
+        contracts = deployer.run(actors.admin);
+        delMundo = DelMundo(contracts.delMundo);
 
         bytes32 domainSeparatorHash = keccak256(abi.encode(
             EIP712DOMAIN_TYPEHASH,
@@ -87,6 +90,9 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
             block.chainid,
             address(delMundo)
         ));
+
+        vm.stopPrank();
+
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));

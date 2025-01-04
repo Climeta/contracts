@@ -6,16 +6,8 @@ import {DelMundo} from "../src/token/DelMundo.sol";
 
 
 contract DeployDelMundo is Script {
-
-    function deploy(address _admin) external returns (address) {
+    function run(address _admin) public returns (address) {
         DelMundo delMundo = new DelMundo(_admin);
-        return (address(delMundo));
-    }
-
-    function run() external returns (address) {
-        address admin = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
-        DelMundo delMundo = new DelMundo(admin);
-        delMundo = DelMundo(address(delMundo));
         return (address(delMundo));
     }
 }

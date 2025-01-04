@@ -30,7 +30,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     address private admin;
     uint256 private adminPk;
 
-    string private constant SIGNING_DOMAIN = "RayNFT-Voucher";
+    string private constant SIGNING_DOMAIN = "DelMundo-Voucher";
     string private constant SIGNATURE_VERSION = "1";
     uint256 private constant MIN_PRICE = 100000000000;
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -51,7 +51,7 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     function setUp() public {
         (admin, adminPk) = makeAddrAndKey("admin");
         DeployDelMundo delMundoDeployer = new DeployDelMundo();
-        delMundo = DelMundo(delMundoDeployer.deploy(admin));
+        delMundo = DelMundo(delMundoDeployer.run(admin));
         address current = address(this);
 
         vm.prank(admin);

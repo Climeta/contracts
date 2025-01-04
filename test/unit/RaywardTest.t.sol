@@ -14,7 +14,7 @@ contract RaywardTest is Test {
     function setUp() public {
         admin = makeAddr("admin");
         DeployRayward raywardDeployer = new DeployRayward();
-        rayward = Rayward(payable(raywardDeployer.deploy(admin)));
+        rayward = Rayward(payable(raywardDeployer.run(admin)));
     }
 
     function testFuzz_GrantMinterAccessControl(address newMinter) public {

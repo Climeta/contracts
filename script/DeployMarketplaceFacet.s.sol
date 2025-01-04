@@ -8,24 +8,8 @@ import "../src/utils/DiamondHelper.sol";
 import "../src/interfaces/IDiamondCut.sol";
 import "../src/interfaces/IMarketplace.sol";
 
-contract DeployMareketplaceFacet is Script, DiamondHelper {
-    uint256 deployerPrivateKey;
-    address deployerAddress;
-
-    constructor(){
-        deployerPrivateKey = vm.envUint("ANVIL_DEPLOYER_PRIVATE_KEY");
-        deployerAddress = vm.envAddress("ANVIL_DEPLOYER_PUBLIC_KEY");
-    }
-
-    function deploy() external {
-        deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployerAddress = vm.envAddress("DEPLOYER_PUBLIC_KEY");
-        run();
-    }
-
-    function run() public {
-        vm.startBroadcast(deployerPrivateKey);
-
+contract DeployMarketplaceFacet is Script, DiamondHelper {
+    function run(address climetaAddress) public  {
         MarketplaceFacet marketplaceFacet = new MarketplaceFacet();
         FacetCut[] memory cut = new FacetCut[](1);
 
@@ -35,13 +19,10 @@ contract DeployMareketplaceFacet is Script, DiamondHelper {
             functionSelectors: generateSelectors("MarketplaceFacet")
         });
 
-        address climetaAddress = vm.envAddress("CLIMETA_ADDRESS");
         IDiamondCut climeta = IDiamondCut(climetaAddress);
 
         bytes memory data = abi.encodeWithSignature("init()");
         climeta.diamondCut(cut, address(marketplaceFacet), data);
         climeta.diamondSetInterface(type(IMarketplace).interfaceId, true);
-
-        vm.stopBroadcast();
     }
 }

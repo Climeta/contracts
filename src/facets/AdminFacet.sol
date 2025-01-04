@@ -90,6 +90,20 @@ contract AdminFacet is IAdmin {
         emit Climeta__VoteRaycognitionChanged(_rewardAmount);
         s.voteRaycognitionAmount = _rewardAmount;
     }
+    /// @notice Sets the address of Ray's DelMundo Wallet when it is created.
+    /// @param _rayWalletAddress The new address
+    function setRayWalletAddress(address _rayWalletAddress) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__RayWalletChanged(_rayWalletAddress);
+        s.rayWalletAddress = _rayWalletAddress;
+    }
+    /// @notice Sets the address of traits
+    /// @param _traitAddress The new reward amount
+    function setDelMundoTraitAddress(address _traitAddress) external {
+        LibDiamond.enforceIsContractOwner();
+        emit Climeta__TraitAddressChanged(_traitAddress);
+        s.delMundoTraitAddress = _traitAddress;
+    }
     /// @notice Sets the amount of raywards given for the voting round. Can only be called by Admins
     /// @param _withdrawRewardOnly The new reward amount
     function setWithdrawalOnly(bool _withdrawRewardOnly) external {

@@ -6,8 +6,10 @@ pragma solidity ^0.8.25;
 interface IAdmin {
     event Climeta__LiquidityPoolAddressChanged(address _lp);
     event Climeta__RewardWithdrawalTypeChange(bool value);
+    event Climeta__RayWalletChanged(address _rayWalletAddress);
     event Climeta__TokenApproved(address _token);
     event Climeta__TokenRevoked(address _token);
+    event Climeta__TraitAddressChanged(address _traitAddress);
     error Climeta__ValueStillInContract();
     event Climeta__VoteRaycognitionChanged(uint256 amount);
     event Climeta__VoteRewardChanged(uint256 amount);
@@ -29,7 +31,9 @@ interface IAdmin {
     function getVoteReward() external view returns (uint256);
     function getVotingRoundReward() external view returns (uint256);
     function removeAllowedToken(address _token) external;
+    function setDelMundoTraitAddress(address _traitAddress) external;
     function setLiquidityPoolAddress(address _lp) external;
+    function setRayWalletAddress(address _rayWalletAddress) external;
     function setVoteRaycognition(uint256 _rewardAmount) external;
     function setVoteReward(uint256 _rewardAmount) external;
     function setVotingRoundReward(uint256 _rewardAmount) external;

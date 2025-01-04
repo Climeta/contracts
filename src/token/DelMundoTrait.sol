@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import {DelMundoWallet} from "../DelMundoWallet.sol";
+import {ITraits} from "../interfaces/ITraits.sol";
 
 /*
  * @dev Extension of ERC-1155 that adds tracking of total supply per id.
@@ -29,7 +30,11 @@ contract DelMundoTrait is ERC1155Supply, Ownable {
 
     mapping(uint256 => TraitStruct) private tokenURIs;
 
-    constructor(address initialOwner) ERC1155("DelMundoTraits") Ownable(initialOwner) {}
+    address private immutable climeta;
+
+    constructor(address initialOwner, address _climeta) ERC1155("DelMundoTraits") Ownable(initialOwner) {
+        climeta = _climeta;
+    }
 
     function uri(uint256 tokenId) public view override returns (string memory) {
         return tokenURIs[tokenId].uri;
@@ -67,7 +72,7 @@ contract DelMundoTrait is ERC1155Supply, Ownable {
 
             // Loop through all transfers and determine if the DelMundo is wearing it and disallow transfer of the last item
             for (uint256 i = 0; i < ids.length; i++) {
-                // Checking = rather than <= as < needs to result in a different error (ie don't have that amount to transfer anyway)
+                // Checking == rather than <= as < needs to result in a different error (ie don't have that amount to transfer anyway)
                 if (isDelMundoWearing(tokenId, ids[i]) && (balanceOf(from, ids[i]) == values[i])  ) {
                     revert DelMundoTraits__TraitInUse();
                 }
@@ -79,7 +84,7 @@ contract DelMundoTrait is ERC1155Supply, Ownable {
     }
 
     function isDelMundoWearing(uint256 tokenId, uint256 traitId) internal view returns (bool) {
-        return true;
+        return ITraits(climeta).isWearing(tokenId, traitId);
     }
 
 }

@@ -2,4 +2,4 @@
 @openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts
 @tokenbound/contracts=lib/tokenbound/src
 @tokenbound/erc6551=lib/tokenbound/lib/erc6551/src
-
+@safe-contracts/contracts=lib/safe-contracts/contracts

@@ -27,7 +27,7 @@ contract DiamondInit {
 
     // You can add parameters to this function in order to pass in
     // data to set your own state variables
-    function init(address _delMundoAddress, address _raywardAddress, address _raycognitionAddress, address _delmundowalletAddress, address _raywalletAddress, address _registryAddress, address _ops, address _delMundoTraitAddress) external {
+    function init(address _delMundoAddress, address _raywardAddress, address _raycognitionAddress, address _delmundowalletAddress, address _raywalletAddress, address _registryAddress, address _ops) external {
         // adding ERC165 data
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         ds.supportedInterfaces[type(IERC165).interfaceId] = true;
@@ -38,7 +38,6 @@ contract DiamondInit {
         // Set up all the relevant addresses for Climeta.
         s.climetaAddress = address(this);
         s.delMundoAddress = _delMundoAddress;
-        s.delMundoTraitAddress = _delMundoTraitAddress;
         s.delMundoWalletAddress = _delmundowalletAddress;
         s.raywardAddress = _raywardAddress;
         s.raycognitionAddress = _raycognitionAddress;
