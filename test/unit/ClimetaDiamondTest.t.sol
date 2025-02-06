@@ -79,11 +79,11 @@ contract ClimetaDiamondTest is Test, DiamondHelper {
         ops = makeAddr("Ops");
         admin = makeAddr("Admin");
 
-        vm.startPrank(admin);
         DeployAll deployer = new DeployAll();
         contracts = deployer.run(admin);
 
         // Deploy Facets
+        vm.startPrank(admin);
         AdminFacet adminFacet = new AdminFacet();
         FacetCut[] memory cut = new FacetCut[](1);
         cut[0] = FacetCut ({

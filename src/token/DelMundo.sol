@@ -81,6 +81,9 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         _;
     }
 
+
+
+
     //////////////// ADMIN FUNCTIONS ////////////////
 
     function addAdmin(address newAdmin) external onlyRay {

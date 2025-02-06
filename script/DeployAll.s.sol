@@ -70,6 +70,7 @@ contract DeployAll is Script {
     }
 
     function run(address _admin) public returns (Addresses memory) {
+        vm.startBroadcast();
         Addresses memory addresses;
         Deployers memory deployers;
 
@@ -103,7 +104,7 @@ contract DeployAll is Script {
         addresses.delMundoTrait = deployers.delMundoTrait.run(_admin, addresses.climeta);
         console.log("DELMUNDOTRAIT_ADDRESS=", addresses.delMundoTrait);
 
-
+        vm.stopBroadcast();
         return addresses;
     }
 }

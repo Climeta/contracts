@@ -78,7 +78,6 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
         vm.deal(actors.user2, 10 ether);
         vm.deal(actors.user3, 10 ether);
 
-        vm.startPrank(actors.admin);
         DeployAll deployer = new DeployAll();
         contracts = deployer.run(actors.admin);
         delMundo = DelMundo(contracts.delMundo);
@@ -90,9 +89,6 @@ contract DelMundoTraitTest is Test, IERC721Receiver, EIP712 {
             block.chainid,
             address(delMundo)
         ));
-
-        vm.stopPrank();
-
 
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));

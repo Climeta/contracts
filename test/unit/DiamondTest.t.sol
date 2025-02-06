@@ -43,10 +43,10 @@ contract DiamondTest is Test, DiamondHelper {
         admin = makeAddr("Admin");
         ops = makeAddr("Ops");
 
-        vm.startPrank(admin);
         DeployAll deployer = new DeployAll();
         contracts = deployer.run(admin);
 
+        vm.startPrank(admin);
         climeta = contracts.climeta;
         //deploy facets and init contract
         MockFacetV1 mockFacet = new MockFacetV1();

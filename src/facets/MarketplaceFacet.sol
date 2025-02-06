@@ -20,7 +20,6 @@ contract MarketplaceFacet is ERC1155Holder, ERC721Holder, IMarketplace {
     constructor(){
     }
 
-
     /// @notice Returns the version of the contract
     /// @return The version of the contract
     /// @dev This function will change when the implementation changes

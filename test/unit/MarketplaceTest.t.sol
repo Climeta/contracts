@@ -60,9 +60,10 @@ contract MarketplaceTest is Test, DiamondHelper {
 
         console.log("Admin address: ", admin);
 
-        vm.startPrank(admin);
         DeployAll deployer = new DeployAll();
         contracts = deployer.run(admin);
+
+        vm.startPrank(admin);
 
         // Deploy Facets
         AdminFacet adminFacet = new AdminFacet();
