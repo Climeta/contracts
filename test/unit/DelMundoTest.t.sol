@@ -122,6 +122,8 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
             address(delMundo)
         ));
 
+        vm.prank(admin);
+
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
@@ -303,6 +305,42 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
         address userB = makeAddr("userB");
         delMundo.transferFrom(address(this), userB, 1);
         assertEq(delMundo.ownerOf(1), userB);
+    }
+
+    function test_transferEmbargo() public {
+
+        bytes32 domainSeparatorHash = keccak256(abi.encode(
+            EIP712DOMAIN_TYPEHASH,
+            keccak256(bytes(SIGNING_DOMAIN)),
+            keccak256(bytes(SIGNATURE_VERSION)),
+            block.chainid,
+            address(delMundo)
+        ));
+
+        VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
+        bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(adminPk, digest);
+        // this rsv combo is correct
+        bytes memory voucherSignature = abi.encodePacked(r,s,v);
+        DelMundo.NFTVoucher memory voucher = DelMundo.NFTVoucher(_voucherData.tokenId, _voucherData.uri, _voucherData.minPrice, voucherSignature);
+
+        // Let's try and redeem it on the cheap!
+        address user1 = makeAddr("user1");
+        address user2 = makeAddr("user2");
+        vm.deal(user1, 10 ether);
+        vm.startPrank(user1);
+        delMundo.redeem{value: 1 ether}(voucher);
+        vm.expectRevert(DelMundo.DelMundo__CannotMoveYet.selector);
+        delMundo.transferFrom(user1, user2, 1);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        delMundo.enableResell();
+
+        vm.prank(user1);
+        delMundo.transferFrom(user1, user2, 1);
+        assertEq(delMundo.ownerOf(1), user2);
     }
 
     function test_getRoyalty() public {
