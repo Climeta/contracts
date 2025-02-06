@@ -34,6 +34,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     event DelMundo__MinterRevoked(address indexed oldMinter);
     event DelMundo__RoyaltyUpdated(address indexed recipient, uint96 value);
     event DelMundo__Withdraw(address indexed recipient, uint256 value);
+    event DelMundo__ResellEnabled();
 
     error DelMundo__AlreadyMinted();
     error DelMundo__CannotMoveToDelMundoWallet();
@@ -43,6 +44,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     error DelMundo__NullAddressError();
     error DelMundo__SoldOut();
     error DelMundo__TooMany();
+    error DelMundo__CannotMoveYet();
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -56,6 +58,7 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     // Some start constants to manage token distribution
     uint256 public s_maxPerWalletAmount = 5;
     uint256 public s_currentMaxSupply = 1000;
+    bool canResell = false;
     // Mapping to flag minted tokens
     mapping (uint256 => bool) public s_isTokenMinted;
 
@@ -126,6 +129,10 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
     function setContractURI(string memory newURI) public onlyRay  {
         emit DelMundo__ContractURIUpdated(newURI);
         _contractURI = newURI;
+    }
+    function enableResell() external onlyRay {
+        emit DelMundo__ResellEnabled();
+        canResell = true;
     }
 
 
@@ -246,8 +253,16 @@ contract DelMundo is  ERC721Enumerable, EIP712, ERC721URIStorage, ERC721Pausable
         super._increaseBalance(account, value);
     }
 
-    // @dev this override prevents DelMundos from being moved to the ERC6551 locker wallet of another DelMundo.
+    // @dev this override prevents DelMundos from being moved to the ERC6551 locker wallet of another DelMundo and includes
+    // a check to prevent DelMundos from being resold or transferred until the canResell flag is set to true, which is a one time event only (cannot be revoked).
     function _update (address to, uint256 tokenId, address auth) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) returns(address) {
+        if (!canResell) {
+            address owner = _ownerOf(tokenId);
+            // if the canresell hasn't been enabled, then only allow transfers from redeeming/minting processes, as these are part of the redeeming process itself.
+            if ( !hasRole(MINTER_ROLE, owner) && owner != address(0)) {
+                revert DelMundo__CannotMoveYet();
+            }
+        }
         bool isDelMundoWallet = ERC165Checker.supportsInterface(to, type(IDelMundoWallet).interfaceId);
         if (isDelMundoWallet) {
             revert DelMundo__CannotMoveToDelMundoWallet();

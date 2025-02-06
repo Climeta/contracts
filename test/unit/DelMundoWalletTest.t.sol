@@ -141,6 +141,10 @@ contract DelMundoWalletTest is Test, IERC721Receiver {
 
 
     function test_IsValidSignature() public {
+
+        vm.prank(admin);
+        delMundo.enableResell();
+
         (address signer, uint256 signerPk) = makeAddrAndKey("signer");
         delMundo.safeMint(signer, 0, "ray-uri");
         delMundo.safeMint(user1, 1, "delmundo1-uri");
