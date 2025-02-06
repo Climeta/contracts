@@ -122,8 +122,6 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
             address(delMundo)
         ));
 
-        vm.prank(admin);
-
         VoucherData memory _voucherData = VoucherData(1, "https://token.uri/", 1 ether);
         bytes32 dataEncoded = keccak256(abi.encode(VOUCHER_TYPEHASH,_voucherData.tokenId,keccak256(bytes(_voucherData.uri)),_voucherData.minPrice));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparatorHash, dataEncoded));
@@ -301,6 +299,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_transferToDifferentWallets() public {
+        vm.prank(admin);
+        delMundo.enableResell();
+
         delMundo.safeMint(address(this), 1, tokenUriToTest);
         address userB = makeAddr("userB");
         delMundo.transferFrom(address(this), userB, 1);
@@ -351,6 +352,9 @@ contract DelMundoTest is Test, IERC721Receiver, EIP712 {
     }
 
     function test_transferToRayWallet() public {
+        vm.prank(admin);
+        delMundo.enableResell();
+
         delMundo.safeMint(address(this), 1, tokenUriToTest);
         DelMundoWallet raywallet1 = new DelMundoWallet();
         console.log("DelMundoWallet is one? ", raywallet1.iAmADelMundoWallet());
