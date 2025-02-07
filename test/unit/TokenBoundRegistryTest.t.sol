@@ -11,7 +11,6 @@ import {DeployDelMundo} from "../../script/DeployDelMundo.s.sol";
 
 contract TokenBoundRegistryTest is Test {
     ERC6551Registry registry;
-    address constant RAY_WALLET_0 = 0x8BB538D8162C84Af471553bD7AE228FF4aD25519;
     DelMundoWallet rayWallet;
     DelMundo delMundo;
     address private admin;
@@ -28,15 +27,20 @@ contract TokenBoundRegistryTest is Test {
         delMundo = DelMundo(delMundoDeployer.run(admin));
     }
 
-    function test_Account() public view {
-        address account = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
-        assertEq(account, RAY_WALLET_0);
-    }
-
     function test_CreateAccount() public {
+        address calcAddress0 = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0);
+        address calcAddress1 = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 1);
+        address calcAddress2 = registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 2);
+
         address account0 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 0);
         address account1 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 1);
         address account2 = registry.createAccount(address(rayWallet), 0, block.chainid, address(delMundo), 2);
+
+        assertEq(account0, calcAddress0);
+        assertEq(account1, calcAddress1);
+        assertEq(account2, calcAddress2);
+        assertEq(account1, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 1));
+        assertEq(account2, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 2));
         assertEq(account0, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 0));
         assertEq(account1, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 1));
         assertEq(account2, registry.account(address(rayWallet), 0, block.chainid, address(delMundo), 2));
